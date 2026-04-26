@@ -13,6 +13,7 @@ export interface PluginSettings {
   openaiApiKey: string
   openaiModel: string
   requestTimeoutMs: number
+  showPreviewDetails: boolean
 }
 
 export interface ParsedQuery {
@@ -64,7 +65,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   openaiBaseUrl: "https://api.openai.com/v1",
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
-  requestTimeoutMs: 10000
+  requestTimeoutMs: 10000,
+  showPreviewDetails: true
 }
 
 export function normalizeProvider(value: string): TranslationProvider {

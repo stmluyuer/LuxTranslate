@@ -20,6 +20,7 @@ async function getSetting(ctx: Context, key: string, fallback: string): Promise<
 async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const timeoutRaw = await getSetting(ctx, "request_timeout_ms", String(DEFAULT_SETTINGS.requestTimeoutMs))
   const timeoutMs = Number.parseInt(timeoutRaw, 10)
+  const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
@@ -31,7 +32,8 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
     openaiBaseUrl: await getSetting(ctx, "openai_base_url", DEFAULT_SETTINGS.openaiBaseUrl),
     openaiApiKey: await getSetting(ctx, "openai_api_key", DEFAULT_SETTINGS.openaiApiKey),
     openaiModel: await getSetting(ctx, "openai_model", DEFAULT_SETTINGS.openaiModel),
-    requestTimeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_SETTINGS.requestTimeoutMs
+    requestTimeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_SETTINGS.requestTimeoutMs,
+    showPreviewDetails
   }
 }
 
@@ -138,6 +140,14 @@ function buildResultActions(translatedText: string, sourceText: string, provider
   return actions
 }
 
+function buildTranslationPreview(translatedText: string, sourceText: string, providerName: string, direction: string, showDetails: boolean): string {
+  if (!showDetails) {
+    return `# ${translatedText}`
+  }
+
+  return [`# ${translatedText}`, "", "## Source", sourceText, "", "## Details", `- Provider: ${providerName}`, `- Direction: ${direction}`].join("\n")
+}
+
 export const plugin: Plugin = {
   init: async (ctx: Context, initParams: PluginInitParams) => {
     api = initParams.API
@@ -178,16 +188,13 @@ export const plugin: Plugin = {
           Score: 100,
           Preview: {
             PreviewType: "markdown",
-            PreviewData: [
-              `# ${translation.translatedText}`,
-              "",
-              "## Source",
+            PreviewData: buildTranslationPreview(
+              translation.translatedText,
               parsed.text,
-              "",
-              "## Details",
-              `- Provider: ${translation.providerName}`,
-              `- Direction: ${direction.sourceLanguage} -> ${direction.targetLanguage}`
-            ].join("\n"),
+              translation.providerName,
+              `${direction.sourceLanguage} -> ${direction.targetLanguage}`,
+              settings.showPreviewDetails
+            ),
             PreviewProperties: {}
           },
           Tails: [

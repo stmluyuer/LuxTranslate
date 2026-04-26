@@ -72,24 +72,33 @@ function providerDisplayName(provider: TranslationProvider): string {
   return "OpenAI compatible"
 }
 
-function buildHelpResult(): Result {
+async function t(ctx: Context, key: string): Promise<string> {
+  try {
+    const value = await api.GetTranslation(ctx, key)
+    return value.trim() === "" ? key : value
+  } catch {
+    return key
+  }
+}
+
+async function buildHelpResult(ctx: Context): Promise<Result> {
   return {
-    Title: "Translate text",
-    SubTitle: "Type tr hello, tr 你好, tr deepl hello, tr ai hello, or tr openai hello",
+    Title: await t(ctx, "help_title"),
+    SubTitle: await t(ctx, "help_subtitle"),
     Icon: PLUGIN_ICON,
     Score: 100,
     Preview: {
       PreviewType: "markdown",
       PreviewData: [
-        "# Wox Translate",
+        `# ${await t(ctx, "plugin_name")}`,
         "",
-        "- `tr hello` uses your default provider.",
-        "- `tr ms hello` uses Microsoft.",
-        "- `tr deepl hello` uses DeepL.",
-        "- `tr ai hello` uses Wox AI.",
-        "- `tr openai hello` uses OpenAI-compatible chat completions.",
-        "- `tr history` shows recent translations.",
-        "- `tr history hello` searches translation history."
+        `- ${await t(ctx, "help_default_provider")}`,
+        `- ${await t(ctx, "help_microsoft")}`,
+        `- ${await t(ctx, "help_deepl")}`,
+        `- ${await t(ctx, "help_wox_ai")}`,
+        `- ${await t(ctx, "help_openai")}`,
+        `- ${await t(ctx, "help_history")}`,
+        `- ${await t(ctx, "help_history_search")}`
       ].join("\n"),
       PreviewProperties: {}
     }
@@ -105,8 +114,9 @@ async function saveHistory(ctx: Context, entries: TranslationHistoryEntry[]): Pr
 }
 
 function buildConfigurationResult(message: string, provider: TranslationProvider): Result {
+  const title = `${providerDisplayName(provider)} needs configuration`
   return {
-    Title: `${providerDisplayName(provider)} needs configuration`,
+    Title: title,
     SubTitle: message,
     Icon: PLUGIN_ICON,
     Score: 100,
@@ -124,17 +134,17 @@ function errorMessageForProvider(error: unknown, provider: TranslationProvider):
   return `${message}${suffix}`
 }
 
-function buildResultActions(translatedText: string, sourceText: string, provider: TranslationProvider): Result["Actions"] {
+async function buildResultActions(ctx: Context, translatedText: string, sourceText: string, provider: TranslationProvider): Promise<Result["Actions"]> {
   const actions: Result["Actions"] = [
     {
-      Name: "Copy translation",
+      Name: await t(ctx, "action_copy_translation"),
       IsDefault: true,
       Action: async (ctx: Context) => {
         await api.Copy(ctx, { type: "text", text: translatedText })
       }
     },
     {
-      Name: "Copy source text",
+      Name: await t(ctx, "action_copy_source"),
       Action: async (ctx: Context) => {
         await api.Copy(ctx, { type: "text", text: sourceText })
       }
@@ -146,7 +156,7 @@ function buildResultActions(translatedText: string, sourceText: string, provider
       continue
     }
     actions.push({
-      Name: `Retry with ${providerDisplayName(alternate)}`,
+      Name: `${await t(ctx, "action_retry_with")} ${providerDisplayName(alternate)}`,
       ContextData: { provider: alternate },
       Action: async (ctx: Context, actionContext: ActionContext) => {
         const nextProvider = (actionContext.ContextData.provider || alternate) as TranslationProvider
@@ -161,12 +171,21 @@ function buildResultActions(translatedText: string, sourceText: string, provider
   return actions
 }
 
-function buildTranslationPreview(translatedText: string, sourceText: string, providerName: string, direction: string, showDetails: boolean): string {
+async function buildTranslationPreview(ctx: Context, translatedText: string, sourceText: string, providerName: string, direction: string, showDetails: boolean): Promise<string> {
   if (!showDetails) {
     return `# ${translatedText}`
   }
 
-  return [`# ${translatedText}`, "", "## Source", sourceText, "", "## Details", `- Provider: ${providerName}`, `- Direction: ${direction}`].join("\n")
+  return [
+    `# ${translatedText}`,
+    "",
+    `## ${await t(ctx, "preview_source")}`,
+    sourceText,
+    "",
+    `## ${await t(ctx, "preview_details")}`,
+    `- ${await t(ctx, "preview_provider")}: ${providerName}`,
+    `- ${await t(ctx, "preview_direction")}: ${direction}`
+  ].join("\n")
 }
 
 async function translateProviderResult(ctx: Context, provider: TranslationProvider, sourceText: string, settings: PluginSettings, score: number, includeProviderInTitle: boolean): Promise<Result> {
@@ -179,7 +198,7 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
   const history = await loadHistory(ctx)
   const historyEntry = history.find(entry => historyKeyMatches(entry, provider, sourceText, direction))
   if (historyEntry) {
-    return buildTranslationResult(historyEntry, sourceText, settings, score, includeProviderInTitle, true)
+    return buildTranslationResult(ctx, historyEntry, sourceText, settings, score, includeProviderInTitle, true)
   }
 
   try {
@@ -199,7 +218,7 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
       timestamp: Date.now()
     }
     await saveHistory(ctx, upsertHistoryEntry(history, entry, settings.historyLimit))
-    return buildTranslationResult(entry, sourceText, settings, score, includeProviderInTitle, false)
+    return buildTranslationResult(ctx, entry, sourceText, settings, score, includeProviderInTitle, false)
   } catch (error) {
     await api.Log(ctx, "Error", error instanceof Error ? error.stack || error.message : String(error))
     return {
@@ -216,13 +235,21 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
   }
 }
 
-function buildTranslationResult(entry: TranslationHistoryEntry, sourceText: string, settings: PluginSettings, score: number, includeProviderInTitle: boolean, fromHistory: boolean): Result {
-  const subtitleParts = [`Source: ${sourceText}`, `${entry.sourceLanguage} -> ${entry.targetLanguage}`, "Enter to copy"]
+async function buildTranslationResult(
+  ctx: Context,
+  entry: TranslationHistoryEntry,
+  sourceText: string,
+  settings: PluginSettings,
+  score: number,
+  includeProviderInTitle: boolean,
+  fromHistory: boolean
+): Promise<Result> {
+  const subtitleParts = [`${await t(ctx, "subtitle_source")}: ${sourceText}`, `${entry.sourceLanguage} -> ${entry.targetLanguage}`, await t(ctx, "subtitle_enter_to_copy")]
   if (entry.detectedSourceLanguage) {
-    subtitleParts.splice(1, 0, `detected ${entry.detectedSourceLanguage}`)
+    subtitleParts.splice(1, 0, `${await t(ctx, "subtitle_detected")} ${entry.detectedSourceLanguage}`)
   }
   if (fromHistory) {
-    subtitleParts.splice(1, 0, "history")
+    subtitleParts.splice(1, 0, await t(ctx, "subtitle_history"))
   }
 
   return {
@@ -232,16 +259,16 @@ function buildTranslationResult(entry: TranslationHistoryEntry, sourceText: stri
     Score: score,
     Preview: {
       PreviewType: "markdown",
-      PreviewData: buildTranslationPreview(entry.translatedText, sourceText, entry.providerName, `${entry.sourceLanguage} -> ${entry.targetLanguage}`, settings.showPreviewDetails),
+      PreviewData: await buildTranslationPreview(ctx, entry.translatedText, sourceText, entry.providerName, `${entry.sourceLanguage} -> ${entry.targetLanguage}`, settings.showPreviewDetails),
       PreviewProperties: {}
     },
     Tails: [
       {
         Type: "text",
-        Text: fromHistory ? "history" : providerDisplayName(entry.provider)
+        Text: fromHistory ? await t(ctx, "subtitle_history") : providerDisplayName(entry.provider)
       }
     ],
-    Actions: buildResultActions(entry.translatedText, sourceText, entry.provider)
+    Actions: await buildResultActions(ctx, entry.translatedText, sourceText, entry.provider)
   }
 }
 
@@ -250,15 +277,15 @@ async function buildHistoryResults(ctx: Context, searchText: string, settings: P
   if (entries.length === 0) {
     return [
       {
-        Title: "No translation history",
-        SubTitle: searchText.trim() === "" ? "Translate something first." : `No history matched: ${searchText}`,
+        Title: await t(ctx, "history_empty_title"),
+        SubTitle: searchText.trim() === "" ? await t(ctx, "history_empty_subtitle") : `${await t(ctx, "history_no_match")}: ${searchText}`,
         Icon: PLUGIN_ICON,
         Score: 100
       }
     ]
   }
 
-  return entries.map((entry, index) => buildTranslationResult(entry, entry.sourceText, settings, 100 - index, true, true))
+  return Promise.all(entries.map((entry, index) => buildTranslationResult(ctx, entry, entry.sourceText, settings, 100 - index, true, true)))
 }
 
 function parseHistoryQuery(search: string): string | null {
@@ -286,7 +313,7 @@ export const plugin: Plugin = {
     const parsed = parseTranslationQuery(search, settings.defaultProvider)
 
     if (parsed.text === "") {
-      return [buildHelpResult()]
+      return [await buildHelpResult(ctx)]
     }
 
     const providers = parsed.forcedProvider || settings.visibleProviders.length === 0 ? [parsed.provider] : settings.visibleProviders

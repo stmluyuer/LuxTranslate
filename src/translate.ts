@@ -88,6 +88,8 @@ const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   openai_compatible: "llm_custom"
 }
 
+const CAIYUN_DEFAULT_TOKEN = "3975l6lr5pcbvidl6jl2"
+
 let microsoftAuthToken = ""
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -451,8 +453,41 @@ export async function translateWithYoudao(request: TranslationRequest): Promise<
   }
 }
 
-export async function translateWithCaiyun(): Promise<TranslationResponse> {
-  throw new Error("Caiyun no-setup translation is reserved, but no stable public no-key endpoint is configured yet.")
+function caiyunTranslationType(direction: LanguageDirection): string {
+  if (direction.sourceLanguage === "zh") return "zh2en"
+  if (direction.sourceLanguage === "en") return "en2zh"
+  return direction.targetLanguage === "zh" ? "auto2zh" : "auto2en"
+}
+
+export async function translateWithCaiyun(request: TranslationRequest): Promise<TranslationResponse> {
+  const transType = caiyunTranslationType(request.direction)
+  const response = await fetchWithTimeout(
+    "https://api.interpreter.caiyunai.com/v1/translator",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Authorization": `token ${CAIYUN_DEFAULT_TOKEN}`
+      },
+      body: JSON.stringify({
+        source: [request.text],
+        trans_type: transType,
+        detect: transType.startsWith("auto"),
+        media: "text"
+      })
+    },
+    request.settings.requestTimeoutMs
+  )
+  const json = (await parseJsonResponse(response, "Caiyun")) as {
+    target?: string[]
+    rc?: number
+  }
+  const translatedText = requireString(json.target?.[0], "Caiyun returned an empty translation.")
+
+  return {
+    translatedText,
+    providerName: "Caiyun"
+  }
 }
 
 function buildTranslationPrompt(text: string, targetLabel: string): AI.Conversation[] {
@@ -573,7 +608,7 @@ export async function translateText(api: PublicAPI, ctx: Context, provider: Tran
     return translateWithYoudao(request)
   }
   if (provider === "caiyun") {
-    return translateWithCaiyun()
+    return translateWithCaiyun(request)
   }
   if (provider === "deepl") {
     return translateWithDeepL(request)

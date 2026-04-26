@@ -8,6 +8,7 @@ import {
   parseTranslationQuery,
   resolveLanguageDirection,
   searchHistoryEntries,
+  translateWithCaiyun,
   translateWithDeepL,
   translateWithMicrosoft,
   translateWithClaude,
@@ -222,6 +223,28 @@ describe("provider requests", () => {
     expect(url).toContain("dict.youdao.com/jsonapi_s")
     expect(init.method).toBe("GET")
     expect(result.translatedText).toBe("你好")
+  })
+
+  test("calls Caiyun no-setup translator endpoint", async () => {
+    const fetchMock = jest.fn(async () => jsonResponse({ target: ["你好"], rc: 0 }))
+    global.fetch = fetchMock as typeof fetch
+
+    const englishDirection = resolveLanguageDirection("hello")
+    const result = await translateWithCaiyun({
+      text: "hello",
+      direction: englishDirection,
+      settings: DEFAULT_SETTINGS
+    })
+
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toBe("https://api.interpreter.caiyunai.com/v1/translator")
+    expect(headersOf(init)["X-Authorization"]).toContain("token ")
+    const body = JSON.parse(init.body as string)
+    expect(body.source).toEqual(["hello"])
+    expect(body.trans_type).toBe("auto2zh")
+    expect(body.detect).toBe(true)
+    expect(result.translatedText).toBe("你好")
+    expect(result.providerName).toBe("Caiyun")
   })
 
   test("surfaces provider failures", async () => {

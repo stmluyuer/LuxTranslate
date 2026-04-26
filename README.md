@@ -2,8 +2,6 @@
 
 LuxTranslate 是一个面向 [Wox](https://github.com/Wox-launcher/Wox) 的翻译插件。它提供 `tr` 触发词，默认自动判断中英文方向：检测到中文时翻译为英文，其他文本默认翻译为中文。
 
-> LuxTranslate 是独立社区插件，不是 Wox Launcher 官方项目。
-
 ## 功能
 
 - 默认 `tr <text>` 快速翻译，回车复制译文。
@@ -19,7 +17,7 @@ LuxTranslate 将翻译源分为三类：
 
 | 类型       | 翻译源                                                |
 | ---------- | ----------------------------------------------------- |
-| 免配置翻译 | Microsoft、有道、彩云（预留）                         |
+| 免配置翻译 | Microsoft、有道、彩云                         |
 | 大模型翻译 | OpenAI、Claude、DeepSeek、通用 OpenAI-compatible 接口 |
 | Wox AI     | 直接使用 Wox 中已经配置好的 AI                        |
 
@@ -27,7 +25,7 @@ LuxTranslate 将翻译源分为三类：
 
 - Microsoft 使用免手动配置的接口，但该接口不是官方稳定 API，可能随时失效。
 - 有道使用公开词典/翻译接口，适合轻量查询。
-- 彩云目前作为预留免配置翻译源，尚未接入稳定免 key 接口。
+- 彩云使用公开 API 接口，内置测试 Token，适合轻量查询。如需稳定使用建议申请自己的 API Token。
 - OpenAI、DeepSeek 和通用大模型使用 OpenAI-compatible chat completions 格式。
 - Claude 使用 Anthropic Messages API 格式。
 
@@ -52,6 +50,7 @@ pnpm build
 | `tr 你好`           | 自动翻译为英文         |
 | `tr ms hello`       | 强制使用 Microsoft     |
 | `tr youdao hello`   | 强制使用有道           |
+| `tr caiyun hello`   | 强制使用彩云           |
 | `tr openai hello`   | 强制使用 OpenAI        |
 | `tr claude hello`   | 强制使用 Claude        |
 | `tr deepseek hello` | 强制使用 DeepSeek      |
@@ -106,8 +105,6 @@ MIT License. See [LICENSE](LICENSE).
 
 LuxTranslate is a translation plugin for [Wox](https://github.com/Wox-launcher/Wox). It uses the `tr` trigger keyword and detects the default direction automatically: Chinese text is translated to English, while other text is translated to Chinese by default.
 
-> LuxTranslate is an independent community plugin. It is not an official Wox Launcher project.
-
 ## Features
 
 - Quick translation with `tr <text>` and Enter-to-copy result actions.
@@ -123,7 +120,7 @@ LuxTranslate groups providers into three categories:
 
 | Category              | Providers                                                   |
 | --------------------- | ----------------------------------------------------------- |
-| No-setup translation  | Microsoft, Youdao, Caiyun (reserved)                        |
+| No-setup translation  | Microsoft, Youdao, Caiyun                        |
 | Large language models | OpenAI, Claude, DeepSeek, custom OpenAI-compatible endpoint |
 | Wox AI                | Uses the AI model configured in Wox                         |
 
@@ -131,7 +128,7 @@ Notes:
 
 - Microsoft uses a no-manual-setup endpoint, but it is not a stable official public API and may stop working.
 - Youdao uses a public dictionary/translation endpoint for lightweight lookups.
-- Caiyun is currently reserved until a stable no-key endpoint is available.
+- Caiyun uses a public API endpoint with a built-in test token for lightweight lookups. Apply for your own API token for reliable long-term use.
 - OpenAI, DeepSeek, and custom LLM providers use the OpenAI-compatible chat completions format.
 - Claude uses the Anthropic Messages API format.
 
@@ -156,6 +153,7 @@ The build output is written to `dist/` and can be installed or packaged followin
 | `tr 你好`           | Translate to English automatically |
 | `tr ms hello`       | Force Microsoft                    |
 | `tr youdao hello`   | Force Youdao                       |
+| `tr caiyun hello`   | Force Caiyun                       |
 | `tr openai hello`   | Force OpenAI                       |
 | `tr claude hello`   | Force Claude                       |
 | `tr deepseek hello` | Force DeepSeek                     |

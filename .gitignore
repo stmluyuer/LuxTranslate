@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build and coverage output
+dist/
+coverage/
+.nyc_output/
+*.wox
+*.zip
+
+# Local editor/system files
+.idea/
+.vscode/
+.DS_Store
+
+# Local runtime data and secrets
+*.log
+.env
+.env.*
+!.env.example
+tmp/
+temp/

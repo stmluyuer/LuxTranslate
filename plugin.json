@@ -1,0 +1,20 @@
+{
+  "Id": "263fa95c-db99-4dc8-be68-784b5ae421f8",
+  "TriggerKeywords": [
+    "tr"
+  ],
+  "Name": "i18n:plugin_name",
+  "Description": "i18n:plugin_description",
+  "Author": "quanhui",
+  "Version": "0.1.0",
+  "MinWoxVersion": "2.0.0",
+  "Runtime": "nodejs",
+  "Website": "https://github.com/quanhui/Wox.Plugin.Translate",
+  "Entry": "index.js",
+  "Icon": "relative:images/app.svg",
+  "SupportedOS": [
+    "windows",
+    "linux",
+    "darwin"
+  ]
+}

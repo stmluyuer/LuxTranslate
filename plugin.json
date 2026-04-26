@@ -46,8 +46,10 @@
       "table_ai_model": "Wox AI model",
       "settings_source": "Source language",
       "settings_source_tip": "Use auto detection unless a provider requires a fixed source language",
-      "settings_target_policy": "Target policy",
-      "settings_target_policy_tip": "Automatically translate Chinese to English and other text to Chinese",
+      "settings_target_language": "Target language",
+      "settings_target_language_tip": "Auto: smart direction based on system language and pair language. Fixed: always translate to this language.",
+      "settings_pair_language": "Pair language",
+      "settings_pair_language_tip": "When translating system language text, use this as the target. Only effective when Target language is Auto.",
       "settings_timeout": "Request timeout",
       "settings_history_limit": "History limit",
       "settings_history_limit_tip": "Maximum number of translation history entries to keep",
@@ -90,7 +92,15 @@
       "provider_claude": "Claude",
       "provider_deepseek": "DeepSeek",
       "provider_custom_llm": "Custom LLM",
-      "target_auto": "Chinese -> English, other -> Chinese"
+      "lang_auto": "Auto (smart direction)",
+      "lang_zh": "Chinese",
+      "lang_en": "English",
+      "lang_ja": "Japanese",
+      "lang_ko": "Korean",
+      "lang_ru": "Russian",
+      "lang_ar": "Arabic",
+      "lang_fr": "French",
+      "lang_de": "German"
     },
     "zh_CN": {
       "plugin_name": "LuxTranslate",
@@ -129,8 +139,10 @@
       "table_ai_model": "Wox AI 模型",
       "settings_source": "源语言",
       "settings_source_tip": "除非翻译服务需要固定源语言，否则建议自动检测",
-      "settings_target_policy": "目标语言策略",
-      "settings_target_policy_tip": "中文自动翻译为英文，其他文本自动翻译为中文",
+      "settings_target_language": "目标语言",
+      "settings_target_language_tip": "自动：根据系统语言和配对语言智能判断方向。固定：始终翻译为此语言。",
+      "settings_pair_language": "配对语言",
+      "settings_pair_language_tip": "当原文为系统语言时，翻译为此语言。仅在目标语言为自动时生效。",
       "settings_timeout": "请求超时",
       "settings_history_limit": "历史记录条数",
       "settings_history_limit_tip": "最多保留多少条翻译历史记录",
@@ -173,7 +185,15 @@
       "provider_claude": "Claude",
       "provider_deepseek": "DeepSeek",
       "provider_custom_llm": "通用大模型",
-      "target_auto": "中文 -> 英文，其他 -> 中文"
+      "lang_auto": "自动（智能方向）",
+      "lang_zh": "中文",
+      "lang_en": "英文",
+      "lang_ja": "日语",
+      "lang_ko": "韩语",
+      "lang_ru": "俄语",
+      "lang_ar": "阿拉伯语",
+      "lang_fr": "法语",
+      "lang_de": "德语"
     }
   },
   "Entry": "index.js",
@@ -471,16 +491,40 @@
         "DefaultValue": "auto",
         "Options": [
           {
-            "Label": "Auto",
+            "Label": "i18n:lang_auto",
             "Value": "auto"
           },
           {
-            "Label": "English",
+            "Label": "i18n:lang_zh",
+            "Value": "zh"
+          },
+          {
+            "Label": "i18n:lang_en",
             "Value": "en"
           },
           {
-            "Label": "Chinese",
-            "Value": "zh"
+            "Label": "i18n:lang_ja",
+            "Value": "ja"
+          },
+          {
+            "Label": "i18n:lang_ko",
+            "Value": "ko"
+          },
+          {
+            "Label": "i18n:lang_ru",
+            "Value": "ru"
+          },
+          {
+            "Label": "i18n:lang_ar",
+            "Value": "ar"
+          },
+          {
+            "Label": "i18n:lang_fr",
+            "Value": "fr"
+          },
+          {
+            "Label": "i18n:lang_de",
+            "Value": "de"
           }
         ],
         "Style": {
@@ -491,14 +535,92 @@
     {
       "Type": "select",
       "Value": {
-        "Key": "default_target_policy",
-        "Label": "i18n:settings_target_policy",
-        "Tooltip": "i18n:settings_target_policy_tip",
-        "DefaultValue": "auto_zh_en",
+        "Key": "default_target_language",
+        "Label": "i18n:settings_target_language",
+        "Tooltip": "i18n:settings_target_language_tip",
+        "DefaultValue": "auto",
         "Options": [
           {
-            "Label": "i18n:target_auto",
-            "Value": "auto_zh_en"
+            "Label": "i18n:lang_auto",
+            "Value": "auto"
+          },
+          {
+            "Label": "i18n:lang_zh",
+            "Value": "zh"
+          },
+          {
+            "Label": "i18n:lang_en",
+            "Value": "en"
+          },
+          {
+            "Label": "i18n:lang_ja",
+            "Value": "ja"
+          },
+          {
+            "Label": "i18n:lang_ko",
+            "Value": "ko"
+          },
+          {
+            "Label": "i18n:lang_ru",
+            "Value": "ru"
+          },
+          {
+            "Label": "i18n:lang_ar",
+            "Value": "ar"
+          },
+          {
+            "Label": "i18n:lang_fr",
+            "Value": "fr"
+          },
+          {
+            "Label": "i18n:lang_de",
+            "Value": "de"
+          }
+        ],
+        "Style": {
+          "Width": 320
+        }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "pair_language",
+        "Label": "i18n:settings_pair_language",
+        "Tooltip": "i18n:settings_pair_language_tip",
+        "DefaultValue": "en",
+        "Options": [
+          {
+            "Label": "i18n:lang_zh",
+            "Value": "zh"
+          },
+          {
+            "Label": "i18n:lang_en",
+            "Value": "en"
+          },
+          {
+            "Label": "i18n:lang_ja",
+            "Value": "ja"
+          },
+          {
+            "Label": "i18n:lang_ko",
+            "Value": "ko"
+          },
+          {
+            "Label": "i18n:lang_ru",
+            "Value": "ru"
+          },
+          {
+            "Label": "i18n:lang_ar",
+            "Value": "ar"
+          },
+          {
+            "Label": "i18n:lang_fr",
+            "Value": "fr"
+          },
+          {
+            "Label": "i18n:lang_de",
+            "Value": "de"
           }
         ],
         "Style": {

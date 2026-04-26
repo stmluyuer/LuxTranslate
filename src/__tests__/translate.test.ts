@@ -1,5 +1,6 @@
 import {
   DEFAULT_SETTINGS,
+  detectLanguage,
   getMissingConfiguration,
   historyKeyMatches,
   parseHistoryEntries,
@@ -32,6 +33,87 @@ function firstFetchCall(fetchMock: jest.Mock): [string, RequestInit] {
 function headersOf(init: RequestInit): Record<string, string> {
   return init.headers as Record<string, string>
 }
+
+describe("language detection (8 languages)", () => {
+  test("detects Chinese via CJK", () => {
+    expect(detectLanguage("你好世界")).toBe("zh")
+    expect(detectLanguage("今天天气不错")).toBe("zh")
+  })
+
+  test("detects Japanese via Kana", () => {
+    expect(detectLanguage("こんにちは")).toBe("ja")
+    expect(detectLanguage("今日はいい天気ですね")).toBe("ja")
+    expect(detectLanguage("私は中国人です")).toBe("ja")
+  })
+
+  test("detects Korean via Hangul", () => {
+    expect(detectLanguage("안녕하세요")).toBe("ko")
+    expect(detectLanguage("감사합니다")).toBe("ko")
+  })
+
+  test("detects Russian via Cyrillic", () => {
+    expect(detectLanguage("Привет")).toBe("ru")
+    expect(detectLanguage("Здравствуйте как дела")).toBe("ru")
+  })
+
+  test("detects Arabic via Arabic script", () => {
+    expect(detectLanguage("مرحبا")).toBe("ar")
+    expect(detectLanguage("كيف حالك")).toBe("ar")
+  })
+
+  test("detects German via specific chars", () => {
+    expect(detectLanguage("schön und großartig")).toBe("de")
+    expect(detectLanguage("für die Prüfung")).toBe("de")
+  })
+
+  test("detects French via specific chars", () => {
+    expect(detectLanguage("Bonjour ça va")).toBe("fr")
+    expect(detectLanguage("très bien merci")).toBe("fr")
+  })
+
+  test("detects English as default for Latin text", () => {
+    expect(detectLanguage("hello world")).toBe("en")
+    expect(detectLanguage("this is a test")).toBe("en")
+  })
+
+  test("returns English for empty/symbol text", () => {
+    expect(detectLanguage("123")).toBe("en")
+    expect(detectLanguage("")).toBe("en")
+  })
+})
+
+describe("resolveLanguageDirection (8 languages)", () => {
+  test("translates non-system language to system language", () => {
+    const dir = resolveLanguageDirection("привет мир", "auto", "zh")
+    expect(dir.sourceLanguage).toBe("auto")
+    expect(dir.targetLanguage).toBe("zh")
+    expect(dir.targetLabel).toBe("Chinese")
+  })
+
+  test("translates system language to English", () => {
+    const dir = resolveLanguageDirection("你好世界", "auto", "zh")
+    expect(dir.sourceLanguage).toBe("auto")
+    expect(dir.targetLanguage).toBe("en")
+    expect(dir.targetLabel).toBe("English")
+  })
+
+  test("uses explicit source language", () => {
+    const dir = resolveLanguageDirection("hello", "zh", "en")
+    expect(dir.sourceLanguage).toBe("zh")
+    expect(dir.targetLanguage).toBe("en")
+  })
+
+  test("returns correct Microsoft target codes", () => {
+    expect(resolveLanguageDirection("你好", "auto", "zh").microsoftTarget).toBe("en")
+    expect(resolveLanguageDirection("hello", "auto", "zh").microsoftTarget).toBe("zh-Hans")
+    expect(resolveLanguageDirection("こんにちは", "auto", "zh").microsoftTarget).toBe("zh-Hans")
+  })
+
+  test("returns correct DeepL target codes", () => {
+    expect(resolveLanguageDirection("안녕", "auto", "zh").deeplTarget).toBe("ZH")
+    expect(resolveLanguageDirection("hello", "auto", "ko").deeplTarget).toBe("KO")
+  })
+})
 
 describe("query parsing", () => {
   test("uses default provider when no provider command is present", () => {
@@ -69,19 +151,6 @@ describe("query parsing", () => {
   })
 })
 
-describe("language direction", () => {
-  test("translates English and non-Chinese text to Chinese", () => {
-    expect(resolveLanguageDirection("hello").targetLanguage).toBe("zh")
-    expect(resolveLanguageDirection("bonjour").deeplTarget).toBe("ZH")
-  })
-
-  test("translates Chinese text to English", () => {
-    const direction = resolveLanguageDirection("你好，世界")
-    expect(direction.targetLanguage).toBe("en")
-    expect(direction.deeplTarget).toBe("EN-US")
-  })
-})
-
 describe("configuration checks", () => {
   test("reports missing provider settings", () => {
     expect(getMissingConfiguration("microsoft", DEFAULT_SETTINGS)).toBeNull()
@@ -92,7 +161,7 @@ describe("configuration checks", () => {
 
 describe("translation history", () => {
   test("parses, searches, upserts, and matches history entries", () => {
-    const direction = resolveLanguageDirection("hello")
+    const direction = resolveLanguageDirection("hello", "auto", "zh")
     const firstEntry = {
       sourceText: "hello",
       translatedText: "你好",
@@ -145,7 +214,7 @@ describe("provider requests", () => {
 
     const result = await translateWithMicrosoft({
       text: "hello",
-      direction: resolveLanguageDirection("hello"),
+      direction: resolveLanguageDirection("hello", "auto", "zh"),
       settings: DEFAULT_SETTINGS
     })
 
@@ -164,7 +233,7 @@ describe("provider requests", () => {
 
     const result = await translateWithDeepL({
       text: "hello",
-      direction: resolveLanguageDirection("hello"),
+      direction: resolveLanguageDirection("hello", "auto", "zh"),
       settings: { ...DEFAULT_SETTINGS, deeplApiKey: "secret" }
     })
 
@@ -181,7 +250,7 @@ describe("provider requests", () => {
 
     const result = await translateWithOpenAICompatible({
       text: "hello",
-      direction: resolveLanguageDirection("hello"),
+      direction: resolveLanguageDirection("hello", "auto", "zh"),
       settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://example.com/v1/", openaiModel: "model-a" }
     })
 
@@ -198,7 +267,7 @@ describe("provider requests", () => {
 
     const result = await translateWithClaude({
       text: "hello",
-      direction: resolveLanguageDirection("hello"),
+      direction: resolveLanguageDirection("hello", "auto", "zh"),
       settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://api.anthropic.com/v1/", openaiModel: "claude-test" }
     })
 
@@ -215,7 +284,7 @@ describe("provider requests", () => {
 
     const result = await translateWithYoudao({
       text: "hello",
-      direction: resolveLanguageDirection("hello"),
+      direction: resolveLanguageDirection("hello", "auto", "zh"),
       settings: DEFAULT_SETTINGS
     })
 
@@ -229,10 +298,10 @@ describe("provider requests", () => {
     const fetchMock = jest.fn(async () => jsonResponse({ target: ["你好"], rc: 0 }))
     global.fetch = fetchMock as typeof fetch
 
-    const englishDirection = resolveLanguageDirection("hello")
+    const direction = resolveLanguageDirection("hello", "auto", "zh")
     const result = await translateWithCaiyun({
       text: "hello",
-      direction: englishDirection,
+      direction,
       settings: DEFAULT_SETTINGS
     })
 
@@ -253,7 +322,7 @@ describe("provider requests", () => {
     await expect(
       translateWithDeepL({
         text: "hello",
-        direction: resolveLanguageDirection("hello"),
+        direction: resolveLanguageDirection("hello", "auto", "zh"),
         settings: { ...DEFAULT_SETTINGS, deeplApiKey: "bad" }
       })
     ).rejects.toThrow("403")

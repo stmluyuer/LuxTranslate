@@ -2,12 +2,54 @@ import { AI, Context, PublicAPI } from "@wox-launcher/wox-plugin"
 
 export type TranslationProvider = "microsoft" | "youdao" | "caiyun" | "openai" | "claude" | "deepseek" | "llm_custom" | "wox_ai" | "deepl" | "openai_compatible"
 
+export type LanguageCode = "auto" | "zh" | "en" | "ja" | "ko" | "ru" | "ar" | "fr" | "de"
+
+/** 语言显示名称（用于 LLM prompt 和 UI） */
+export const LANGUAGE_LABEL: Record<string, string> = {
+  zh: "Chinese",
+  en: "English",
+  ja: "Japanese",
+  ko: "Korean",
+  ru: "Russian",
+  ar: "Arabic",
+  fr: "French",
+  de: "German"
+}
+
+/** Microsoft Translator API 语言代码 */
+export const LANGUAGE_MICROSOFT: Record<string, string> = {
+  zh: "zh-Hans",
+  en: "en",
+  ja: "ja",
+  ko: "ko",
+  ru: "ru",
+  ar: "ar",
+  fr: "fr",
+  de: "de"
+}
+
+/** DeepL API 语言代码 */
+export const LANGUAGE_DEEPL: Record<string, string> = {
+  zh: "ZH",
+  en: "EN-US",
+  ja: "JA",
+  ko: "KO",
+  ru: "RU",
+  ar: "AR",
+  fr: "FR",
+  de: "DE"
+}
+
 export interface PluginSettings {
   defaultProvider: TranslationProvider
   visibleProviders: TranslationProvider[]
   providerRows: ProviderTableRow[]
-  defaultSourceLanguage: "auto" | "en" | "zh"
-  defaultTargetPolicy: "auto_zh_en"
+  defaultSourceLanguage: LanguageCode
+  defaultTargetLanguage: LanguageCode
+  /** 配对语言：当源 = 系统语言时翻译成此语言，默认英语 */
+  pairLanguage: LanguageCode
+  /** 系统语言（由插件 init 时探针检测，不需要持久化） */
+  systemLanguage?: LanguageCode
   deeplPlan: "free" | "pro"
   deeplApiKey: string
   woxAiModel: string
@@ -26,8 +68,8 @@ export interface ParsedQuery {
 }
 
 export interface LanguageDirection {
-  sourceLanguage: "auto" | "en" | "zh"
-  targetLanguage: "en" | "zh"
+  sourceLanguage: LanguageCode
+  targetLanguage: LanguageCode
   targetLabel: string
   microsoftTarget: string
   deeplTarget: string
@@ -50,8 +92,8 @@ export interface TranslationHistoryEntry {
   translatedText: string
   provider: TranslationProvider
   providerName: string
-  sourceLanguage: "auto" | "en" | "zh"
-  targetLanguage: "en" | "zh"
+  sourceLanguage: LanguageCode
+  targetLanguage: LanguageCode
   detectedSourceLanguage?: string
   timestamp: number
 }
@@ -97,7 +139,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   visibleProviders: [],
   providerRows: [],
   defaultSourceLanguage: "auto",
-  defaultTargetPolicy: "auto_zh_en",
+  defaultTargetLanguage: "auto",
+  pairLanguage: "en",
   deeplPlan: "free",
   deeplApiKey: "",
   woxAiModel: "",
@@ -262,48 +305,84 @@ export function parseTranslationQuery(search: string, defaultProvider: Translati
   }
 }
 
-export function hasSignificantChineseText(text: string): boolean {
-  let cjk = 0
-  let total = 0
+type ScriptFamily = "cjk" | "kana" | "hangul" | "cyrillic" | "arabic" | "latin" | null
+
+/** 法语特征字符 */
+const FRENCH_SPECIFIC = /[çèêëàâîïôùûœÇÈÊËÀÂÎÏÔÙÛŒ]/
+
+/** 德语特征字符 */
+const GERMAN_SPECIFIC = /[ßüöäÜÖÄ]/
+
+function detectScriptFamily(text: string): ScriptFamily {
+  let cjk = 0,
+    latin = 0,
+    cyrillic = 0,
+    hangul = 0,
+    kana = 0,
+    arabic = 0,
+    total = 0
 
   for (const char of text) {
-    if (/\s/.test(char)) {
-      continue
-    }
-    const code = char.codePointAt(0)
-    if (code === undefined) {
-      continue
-    }
-    if ((code >= 0x21 && code <= 0x40) || (code >= 0x5b && code <= 0x60) || (code >= 0x7b && code <= 0x7e) || (code >= 0xff00 && code <= 0xffef)) {
-      continue
-    }
+    if (/\s/.test(char)) continue
+    const code = char.codePointAt(0)!
     total++
     if ((code >= 0x4e00 && code <= 0x9fff) || (code >= 0x3400 && code <= 0x4dbf) || (code >= 0xf900 && code <= 0xfaff)) {
       cjk++
+    } else if ((code >= 0x3040 && code <= 0x309f) || (code >= 0x30a0 && code <= 0x30ff)) {
+      kana++
+    } else if (code >= 0xac00 && code <= 0xd7af) {
+      hangul++
+    } else if (code >= 0x0400 && code <= 0x04ff) {
+      cyrillic++
+    } else if ((code >= 0x0600 && code <= 0x06ff) || (code >= 0x0750 && code <= 0x077f) || (code >= 0xfb50 && code <= 0xfdff) || (code >= 0xfe70 && code <= 0xfeff)) {
+      arabic++
+    } else if ((code >= 0x0041 && code <= 0x005a) || (code >= 0x0061 && code <= 0x007a) || (code >= 0x00c0 && code <= 0x024f)) {
+      latin++
     }
   }
 
-  return total > 0 && cjk / total > 0.2
+  if (total === 0) return null
+  if (kana > 0 && (kana + cjk) / total > 0.3) return "kana"
+  if (hangul / total > 0.3) return "hangul"
+  if (cjk / total > 0.3) return "cjk"
+  if (arabic / total > 0.3) return "arabic"
+  if (cyrillic / total > 0.3) return "cyrillic"
+  if (latin / total > 0.5) return "latin"
+  return null
 }
 
-export function resolveLanguageDirection(text: string, sourceLanguage: "auto" | "en" | "zh" = "auto"): LanguageDirection {
-  const source = sourceLanguage === "auto" ? (hasSignificantChineseText(text) ? "zh" : "en") : sourceLanguage
-  if (source === "zh") {
-    return {
-      sourceLanguage: sourceLanguage === "auto" ? "auto" : "zh",
-      targetLanguage: "en",
-      targetLabel: "English",
-      microsoftTarget: "en",
-      deeplTarget: "EN-US"
-    }
+/** 检测文本的 8 大语言 */
+export function detectLanguage(text: string): LanguageCode {
+  const script = detectScriptFamily(text)
+
+  if (script === "kana") return "ja"
+  if (script === "hangul") return "ko"
+  if (script === "cjk") return "zh"
+  if (script === "arabic") return "ar"
+  if (script === "cyrillic") return "ru"
+
+  if (script === "latin") {
+    if (GERMAN_SPECIFIC.test(text)) return "de"
+    if (FRENCH_SPECIFIC.test(text)) return "fr"
+    return "en"
   }
 
+  return "en"
+}
+
+export function resolveLanguageDirection(text: string, sourceLanguage: LanguageCode = "auto", systemLanguage: LanguageCode = "en", pairLanguage: LanguageCode = "en"): LanguageDirection {
+  const detected = detectLanguage(text)
+  const source = sourceLanguage === "auto" ? detected : sourceLanguage
+
+  // 智能目标：源 != 系统语言 → 系统语言（看懂外语）；源 == 系统语言 → 配对语言（互译）
+  const target = source === systemLanguage ? pairLanguage : systemLanguage
+
   return {
-    sourceLanguage: sourceLanguage === "auto" ? "auto" : "en",
-    targetLanguage: "zh",
-    targetLabel: "Chinese",
-    microsoftTarget: "zh-Hans",
-    deeplTarget: "ZH"
+    sourceLanguage: sourceLanguage === "auto" ? "auto" : source,
+    targetLanguage: target,
+    targetLabel: LANGUAGE_LABEL[target] || "English",
+    microsoftTarget: LANGUAGE_MICROSOFT[target] || target,
+    deeplTarget: LANGUAGE_DEEPL[target] || target.toUpperCase()
   }
 }
 
@@ -454,6 +533,7 @@ export async function translateWithYoudao(request: TranslationRequest): Promise<
 }
 
 function caiyunTranslationType(direction: LanguageDirection): string {
+  // 彩云只支持中英双向
   if (direction.sourceLanguage === "zh") return "zh2en"
   if (direction.sourceLanguage === "en") return "en2zh"
   return direction.targetLanguage === "zh" ? "auto2zh" : "auto2en"

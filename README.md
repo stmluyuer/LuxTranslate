@@ -17,7 +17,7 @@ LuxTranslate 将翻译源分为三类：
 
 | 类型       | 翻译源                                                |
 | ---------- | ----------------------------------------------------- |
-| 免配置翻译 | Microsoft、有道、彩云                         |
+| 免配置翻译 | Microsoft、有道、彩云                                 |
 | 大模型翻译 | OpenAI、Claude、DeepSeek、通用 OpenAI-compatible 接口 |
 | Wox AI     | 直接使用 Wox 中已经配置好的 AI                        |
 
@@ -120,7 +120,7 @@ LuxTranslate groups providers into three categories:
 
 | Category              | Providers                                                   |
 | --------------------- | ----------------------------------------------------------- |
-| No-setup translation  | Microsoft, Youdao, Caiyun                        |
+| No-setup translation  | Microsoft, Youdao, Caiyun                                   |
 | Large language models | OpenAI, Claude, DeepSeek, custom OpenAI-compatible endpoint |
 | Wox AI                | Uses the AI model configured in Wox                         |
 

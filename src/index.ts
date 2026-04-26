@@ -1,6 +1,7 @@
 import { ActionContext, Context, Plugin, PluginInitParams, PublicAPI, Query, Result, WoxImage } from "@wox-launcher/wox-plugin"
 import {
   DEFAULT_SETTINGS,
+  detectLanguage,
   getMissingConfiguration,
   historyKeyMatches,
   normalizeProvider,
@@ -14,10 +15,12 @@ import {
   translateText,
   TranslationHistoryEntry,
   TranslationProvider,
-  upsertHistoryEntry
+  upsertHistoryEntry,
+  LanguageCode
 } from "./translate"
 
 let api: PublicAPI
+let systemLanguage: LanguageCode = "en"
 
 const HISTORY_SETTING_KEY = "translation_history"
 
@@ -46,12 +49,17 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const llmProviderTableValue = await getSetting(ctx, "llm_provider_table", "")
   const visibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
 
+  const targetLanguageRaw = await getSetting(ctx, "default_target_language", DEFAULT_SETTINGS.defaultTargetLanguage || "auto")
+  const pairLanguageRaw = await getSetting(ctx, "pair_language", DEFAULT_SETTINGS.pairLanguage || "en")
+
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
     visibleProviders,
     providerRows: [...parseProviderTableRows(providerTableValue), ...parseProviderTableRows(noSetupProviderTableValue), ...parseProviderTableRows(llmProviderTableValue)],
-    defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as "auto" | "en" | "zh",
-    defaultTargetPolicy: "auto_zh_en",
+    defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as LanguageCode,
+    defaultTargetLanguage: normalizeLanguageCode(targetLanguageRaw) as LanguageCode,
+    pairLanguage: normalizeLanguageCode(pairLanguageRaw) as LanguageCode,
+    systemLanguage,
     deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",
     deeplApiKey: await getSetting(ctx, "deepl_api_key", DEFAULT_SETTINGS.deeplApiKey),
     woxAiModel: await getSetting(ctx, "wox_ai_model", DEFAULT_SETTINGS.woxAiModel),
@@ -86,6 +94,15 @@ function settingsForProvider(settings: PluginSettings, provider: TranslationProv
     openaiApiKey: row.apiKey?.trim() || settings.openaiApiKey,
     openaiModel: row.model?.trim() || providerDefaults.openaiModel || settings.openaiModel
   }
+}
+
+const VALID_LANGUAGE_CODES = ["auto", "zh", "en", "ja", "ko", "ru", "ar", "fr", "de"]
+
+function normalizeLanguageCode(value: string): LanguageCode {
+  if (VALID_LANGUAGE_CODES.includes(value)) {
+    return value as LanguageCode
+  }
+  return "auto"
 }
 
 function providerCommand(provider: TranslationProvider): string {
@@ -239,7 +256,10 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
     return buildConfigurationResult(missingConfiguration, provider)
   }
 
-  const direction = resolveLanguageDirection(sourceText, providerSettings.defaultSourceLanguage)
+  // 如果用户指定了固定目标语言则直接使用，否则智能模式（系统语言 + 配对语言）
+  const effectiveTarget = providerSettings.defaultTargetLanguage === "auto" ? providerSettings.systemLanguage || "en" : providerSettings.defaultTargetLanguage
+
+  const direction = resolveLanguageDirection(sourceText, providerSettings.defaultSourceLanguage, effectiveTarget, providerSettings.pairLanguage || "en")
   const history = await loadHistory(ctx)
   const historyEntry = history.find(entry => historyKeyMatches(entry, provider, sourceText, direction))
   if (historyEntry) {
@@ -345,7 +365,17 @@ function parseHistoryQuery(search: string): string | null {
 export const plugin: Plugin = {
   init: async (ctx: Context, initParams: PluginInitParams) => {
     api = initParams.API
-    await api.Log(ctx, "Info", "LuxTranslate initialized")
+    // 探针检测 Wox 系统语言
+    try {
+      const name = await api.GetTranslation(ctx, "plugin_name")
+      const detectedSystem = detectLanguage(name)
+      if (detectedSystem !== "en") {
+        systemLanguage = detectedSystem
+      }
+    } catch {
+      systemLanguage = "en"
+    }
+    await api.Log(ctx, "Info", `LuxTranslate initialized, system language: ${systemLanguage}`)
   },
 
   query: async (ctx: Context, query: Query): Promise<Result[]> => {

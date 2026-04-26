@@ -4,7 +4,6 @@ import {
   historyKeyMatches,
   parseHistoryEntries,
   parseProviderList,
-  parseProviderTableProviders,
   parseProviderTableRows,
   parseTranslationQuery,
   resolveLanguageDirection,
@@ -49,17 +48,17 @@ describe("query parsing", () => {
 
   test("parses visible provider lists", () => {
     expect(parseProviderList("microsoft,openai_compatible,deepl,openai_compatible")).toEqual(["microsoft", "openai_compatible", "deepl"])
+    expect(parseProviderList(JSON.stringify(["deepl", "wox_ai"]))).toEqual(["deepl", "wox_ai"])
     expect(parseProviderList("")).toEqual([])
   })
 
-  test("parses enabled providers from provider table rows", () => {
+  test("parses provider configuration rows", () => {
     const rows = [
-      { enabled: false, provider: "microsoft" },
-      { enabled: "true", provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" },
-      { enabled: true, provider: "openai_compatible", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" },
-      { enabled: true, provider: "unknown" }
+      { provider: "microsoft" },
+      { provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" },
+      { provider: "openai_compatible", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" },
+      { provider: "unknown" }
     ]
-    expect(parseProviderTableProviders(JSON.stringify(rows))).toEqual(["deepl", "openai_compatible"])
     expect(parseProviderTableRows(JSON.stringify(rows))[1]).toMatchObject({ provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" })
   })
 })

@@ -6,7 +6,6 @@ import {
   normalizeProvider,
   parseHistoryEntries,
   parseProviderList,
-  parseProviderTableProviders,
   parseProviderTableRows,
   parseTranslationQuery,
   PluginSettings,
@@ -43,12 +42,11 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const historyLimit = Number.parseInt(historyLimitRaw, 10)
   const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
   const providerTableValue = await getSetting(ctx, "provider_table", "")
-  const tableProviders = parseProviderTableProviders(providerTableValue)
-  const legacyVisibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
+  const visibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
-    visibleProviders: tableProviders.length > 0 ? tableProviders : legacyVisibleProviders,
+    visibleProviders,
     providerRows: parseProviderTableRows(providerTableValue),
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as "auto" | "en" | "zh",
     defaultTargetPolicy: "auto_zh_en",

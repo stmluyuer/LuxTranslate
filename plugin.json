@@ -20,8 +20,7 @@
       "settings_visible_providers": "Visible providers",
       "settings_visible_providers_tip": "Choose one or more providers to display together. Leave empty to show only the default provider.",
       "settings_provider_table": "Translation providers",
-      "settings_provider_table_tip": "Enable one or more providers to show multiple translation results together. Leave every row disabled to use only the default provider.",
-      "table_enabled": "Enabled",
+      "settings_provider_table_tip": "Configure API keys, base URLs, models, and provider notes. Use Visible providers above to choose which providers are shown together.",
       "table_name": "Name",
       "table_provider": "Provider",
       "table_note": "Note",
@@ -83,8 +82,7 @@
       "settings_visible_providers": "同时显示翻译源",
       "settings_visible_providers_tip": "选择一个或多个翻译源同时展示。留空则只显示默认翻译源。",
       "settings_provider_table": "翻译源列表",
-      "settings_provider_table_tip": "启用一个或多个翻译源后，会同时显示多种翻译结果。所有行都不启用时，只使用默认翻译源。",
-      "table_enabled": "启用",
+      "settings_provider_table_tip": "配置 API Key、Base URL、模型和备注。要选择同时显示哪些翻译源，请使用上方的“同时显示翻译源”。",
       "table_name": "名称",
       "table_provider": "翻译源",
       "table_note": "备注",
@@ -189,22 +187,47 @@
       }
     },
     {
+      "Type": "select",
+      "Value": {
+        "Key": "visible_providers",
+        "Label": "i18n:settings_visible_providers",
+        "Tooltip": "i18n:settings_visible_providers_tip",
+        "DefaultValue": "",
+        "IsMulti": true,
+        "Options": [
+          {
+            "Label": "i18n:provider_microsoft",
+            "Value": "microsoft"
+          },
+          {
+            "Label": "i18n:provider_deepl",
+            "Value": "deepl"
+          },
+          {
+            "Label": "i18n:provider_wox_ai",
+            "Value": "wox_ai"
+          },
+          {
+            "Label": "i18n:provider_openai",
+            "Value": "openai_compatible"
+          }
+        ],
+        "Style": {
+          "Width": 420
+        }
+      }
+    },
+    {
       "Type": "table",
       "Value": {
         "Key": "provider_table",
         "Title": "i18n:settings_provider_table",
         "Tooltip": "i18n:settings_provider_table_tip",
-        "DefaultValue": "[{\"enabled\":false,\"name\":\"Microsoft\",\"provider\":\"microsoft\",\"note\":\"No setup\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"enabled\":false,\"name\":\"DeepL\",\"provider\":\"deepl\",\"note\":\"Needs API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"enabled\":false,\"name\":\"Wox AI\",\"provider\":\"wox_ai\",\"note\":\"Uses Wox AI\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"enabled\":false,\"name\":\"OpenAI compatible\",\"provider\":\"openai_compatible\",\"note\":\"Needs API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"https://api.openai.com/v1\",\"model\":\"gpt-4o-mini\",\"aiModel\":\"\"}]",
+        "DefaultValue": "[{\"name\":\"Microsoft\",\"provider\":\"microsoft\",\"note\":\"No setup\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"name\":\"DeepL\",\"provider\":\"deepl\",\"note\":\"Needs API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"name\":\"Wox AI\",\"provider\":\"wox_ai\",\"note\":\"Uses Wox AI\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"name\":\"OpenAI compatible\",\"provider\":\"openai_compatible\",\"note\":\"Needs API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"https://api.openai.com/v1\",\"model\":\"gpt-4o-mini\",\"aiModel\":\"\"}]",
         "SortColumnKey": "name",
         "SortOrder": "asc",
         "MaxHeight": 260,
         "Columns": [
-          {
-            "Key": "enabled",
-            "Label": "i18n:table_enabled",
-            "Type": "checkbox",
-            "Width": 70
-          },
           {
             "Key": "name",
             "Label": "i18n:table_name",

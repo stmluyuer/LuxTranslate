@@ -57,7 +57,6 @@ export interface TranslationHistoryEntry {
 }
 
 export interface ProviderTableRow {
-  enabled?: boolean | string
   provider?: string
   name?: string
   note?: string
@@ -111,7 +110,18 @@ function isTranslationProvider(value: string): value is TranslationProvider {
 
 export function parseProviderList(value: string): TranslationProvider[] {
   const providers: TranslationProvider[] = []
-  for (const rawValue of value.split(",")) {
+
+  let rawValues = value.split(",")
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (Array.isArray(parsed)) {
+      rawValues = parsed.filter(item => typeof item === "string")
+    }
+  } catch {
+    // Wox commonly stores multi-select values as a comma separated string.
+  }
+
+  for (const rawValue of rawValues) {
     const trimmed = rawValue.trim()
     if (trimmed === "") {
       continue
@@ -122,17 +132,6 @@ export function parseProviderList(value: string): TranslationProvider[] {
     }
   }
   return providers
-}
-
-function isEnabledTableValue(value: unknown): boolean {
-  return value === true || value === "true"
-}
-
-export function parseProviderTableProviders(value: string): TranslationProvider[] {
-  return parseProviderTableRows(value)
-    .filter(row => isEnabledTableValue(row.enabled) && typeof row.provider === "string" && isTranslationProvider(row.provider))
-    .map(row => row.provider as TranslationProvider)
-    .filter((provider, index, providers) => providers.indexOf(provider) === index)
 }
 
 export function parseProviderTableRows(value: string): ProviderTableRow[] {

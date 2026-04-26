@@ -158,7 +158,14 @@ async function buildHelpResult(ctx: Context): Promise<Result> {
         `- ${await t(ctx, "help_custom_llm")}`,
         `- ${await t(ctx, "help_wox_ai")}`,
         `- ${await t(ctx, "help_history")}`,
-        `- ${await t(ctx, "help_history_search")}`
+        `- ${await t(ctx, "help_history_search")}`,
+        "",
+        `### ${await t(ctx, "preview_direction")}`,
+        `- ${await t(ctx, "help_lang_target")}`,
+        `- ${await t(ctx, "help_lang_source_target")}`,
+        `- ${await t(ctx, "help_lang_colon_target")}`,
+        `- ${await t(ctx, "help_provider_lang")}`,
+        `- ${await t(ctx, "help_provider_source_target")}`
       ].join("\n"),
       PreviewProperties: {}
     }

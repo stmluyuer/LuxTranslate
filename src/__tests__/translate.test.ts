@@ -1,12 +1,16 @@
 import {
   DEFAULT_SETTINGS,
   getMissingConfiguration,
+  historyKeyMatches,
+  parseHistoryEntries,
   parseProviderList,
   parseTranslationQuery,
   resolveLanguageDirection,
+  searchHistoryEntries,
   translateWithDeepL,
   translateWithMicrosoft,
-  translateWithOpenAICompatible
+  translateWithOpenAICompatible,
+  upsertHistoryEntry
 } from "../translate"
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -65,6 +69,33 @@ describe("configuration checks", () => {
     expect(getMissingConfiguration("microsoft", DEFAULT_SETTINGS)).toBeNull()
     expect(getMissingConfiguration("deepl", DEFAULT_SETTINGS)).toContain("DeepL API key")
     expect(getMissingConfiguration("openai_compatible", DEFAULT_SETTINGS)).toContain("OpenAI-compatible API key")
+  })
+})
+
+describe("translation history", () => {
+  test("parses, searches, upserts, and matches history entries", () => {
+    const direction = resolveLanguageDirection("hello")
+    const firstEntry = {
+      sourceText: "hello",
+      translatedText: "你好",
+      provider: "microsoft" as const,
+      providerName: "Microsoft",
+      sourceLanguage: direction.sourceLanguage,
+      targetLanguage: direction.targetLanguage,
+      timestamp: 1
+    }
+    const secondEntry = {
+      ...firstEntry,
+      sourceText: "world",
+      translatedText: "世界",
+      timestamp: 2
+    }
+
+    const entries = upsertHistoryEntry(upsertHistoryEntry([], firstEntry, 10), secondEntry, 1)
+    expect(entries).toEqual([secondEntry])
+    expect(searchHistoryEntries([firstEntry, secondEntry], "hell")).toEqual([firstEntry])
+    expect(parseHistoryEntries(JSON.stringify([firstEntry]))).toEqual([firstEntry])
+    expect(historyKeyMatches(firstEntry, "microsoft", "hello", direction)).toBe(true)
   })
 })
 

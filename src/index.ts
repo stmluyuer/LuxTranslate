@@ -2,16 +2,23 @@ import { ActionContext, Context, Plugin, PluginInitParams, PublicAPI, Query, Res
 import {
   DEFAULT_SETTINGS,
   getMissingConfiguration,
+  historyKeyMatches,
   normalizeProvider,
+  parseHistoryEntries,
   parseProviderList,
   parseTranslationQuery,
   PluginSettings,
   resolveLanguageDirection,
+  searchHistoryEntries,
   translateText,
-  TranslationProvider
+  TranslationHistoryEntry,
+  TranslationProvider,
+  upsertHistoryEntry
 } from "./translate"
 
 let api: PublicAPI
+
+const HISTORY_SETTING_KEY = "translation_history"
 
 const PLUGIN_ICON: WoxImage = {
   ImageType: "relative",
@@ -30,6 +37,8 @@ async function getSetting(ctx: Context, key: string, fallback: string): Promise<
 async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const timeoutRaw = await getSetting(ctx, "request_timeout_ms", String(DEFAULT_SETTINGS.requestTimeoutMs))
   const timeoutMs = Number.parseInt(timeoutRaw, 10)
+  const historyLimitRaw = await getSetting(ctx, "history_limit", String(DEFAULT_SETTINGS.historyLimit))
+  const historyLimit = Number.parseInt(historyLimitRaw, 10)
   const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
 
   return {
@@ -44,7 +53,8 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
     openaiApiKey: await getSetting(ctx, "openai_api_key", DEFAULT_SETTINGS.openaiApiKey),
     openaiModel: await getSetting(ctx, "openai_model", DEFAULT_SETTINGS.openaiModel),
     requestTimeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_SETTINGS.requestTimeoutMs,
-    showPreviewDetails
+    showPreviewDetails,
+    historyLimit: Number.isFinite(historyLimit) && historyLimit >= 0 ? historyLimit : DEFAULT_SETTINGS.historyLimit
   }
 }
 
@@ -77,11 +87,21 @@ function buildHelpResult(): Result {
         "- `tr ms hello` uses Microsoft.",
         "- `tr deepl hello` uses DeepL.",
         "- `tr ai hello` uses Wox AI.",
-        "- `tr openai hello` uses OpenAI-compatible chat completions."
+        "- `tr openai hello` uses OpenAI-compatible chat completions.",
+        "- `tr history` shows recent translations.",
+        "- `tr history hello` searches translation history."
       ].join("\n"),
       PreviewProperties: {}
     }
   }
+}
+
+async function loadHistory(ctx: Context): Promise<TranslationHistoryEntry[]> {
+  return parseHistoryEntries(await getSetting(ctx, HISTORY_SETTING_KEY, "[]"))
+}
+
+async function saveHistory(ctx: Context, entries: TranslationHistoryEntry[]): Promise<void> {
+  await api.SaveSetting(ctx, HISTORY_SETTING_KEY, JSON.stringify(entries), false)
 }
 
 function buildConfigurationResult(message: string, provider: TranslationProvider): Result {
@@ -156,41 +176,30 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
   }
 
   const direction = resolveLanguageDirection(sourceText, settings.defaultSourceLanguage)
+  const history = await loadHistory(ctx)
+  const historyEntry = history.find(entry => historyKeyMatches(entry, provider, sourceText, direction))
+  if (historyEntry) {
+    return buildTranslationResult(historyEntry, sourceText, settings, score, includeProviderInTitle, true)
+  }
+
   try {
     const translation = await translateText(api, ctx, provider, {
       text: sourceText,
       direction,
       settings
     })
-    const subtitleParts = [`Source: ${sourceText}`, `${direction.sourceLanguage} -> ${direction.targetLanguage}`, "Enter to copy"]
-    if (translation.detectedSourceLanguage) {
-      subtitleParts.splice(1, 0, `detected ${translation.detectedSourceLanguage}`)
+    const entry: TranslationHistoryEntry = {
+      sourceText,
+      translatedText: translation.translatedText,
+      provider,
+      providerName: translation.providerName,
+      sourceLanguage: direction.sourceLanguage,
+      targetLanguage: direction.targetLanguage,
+      detectedSourceLanguage: translation.detectedSourceLanguage,
+      timestamp: Date.now()
     }
-
-    return {
-      Title: includeProviderInTitle ? `${translation.providerName}: ${translation.translatedText}` : translation.translatedText,
-      SubTitle: subtitleParts.join(" | "),
-      Icon: PLUGIN_ICON,
-      Score: score,
-      Preview: {
-        PreviewType: "markdown",
-        PreviewData: buildTranslationPreview(
-          translation.translatedText,
-          sourceText,
-          translation.providerName,
-          `${direction.sourceLanguage} -> ${direction.targetLanguage}`,
-          settings.showPreviewDetails
-        ),
-        PreviewProperties: {}
-      },
-      Tails: [
-        {
-          Type: "text",
-          Text: providerDisplayName(provider)
-        }
-      ],
-      Actions: buildResultActions(translation.translatedText, sourceText, provider)
-    }
+    await saveHistory(ctx, upsertHistoryEntry(history, entry, settings.historyLimit))
+    return buildTranslationResult(entry, sourceText, settings, score, includeProviderInTitle, false)
   } catch (error) {
     await api.Log(ctx, "Error", error instanceof Error ? error.stack || error.message : String(error))
     return {
@@ -207,6 +216,60 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
   }
 }
 
+function buildTranslationResult(entry: TranslationHistoryEntry, sourceText: string, settings: PluginSettings, score: number, includeProviderInTitle: boolean, fromHistory: boolean): Result {
+  const subtitleParts = [`Source: ${sourceText}`, `${entry.sourceLanguage} -> ${entry.targetLanguage}`, "Enter to copy"]
+  if (entry.detectedSourceLanguage) {
+    subtitleParts.splice(1, 0, `detected ${entry.detectedSourceLanguage}`)
+  }
+  if (fromHistory) {
+    subtitleParts.splice(1, 0, "history")
+  }
+
+  return {
+    Title: includeProviderInTitle ? `${entry.providerName}: ${entry.translatedText}` : entry.translatedText,
+    SubTitle: subtitleParts.join(" | "),
+    Icon: PLUGIN_ICON,
+    Score: score,
+    Preview: {
+      PreviewType: "markdown",
+      PreviewData: buildTranslationPreview(entry.translatedText, sourceText, entry.providerName, `${entry.sourceLanguage} -> ${entry.targetLanguage}`, settings.showPreviewDetails),
+      PreviewProperties: {}
+    },
+    Tails: [
+      {
+        Type: "text",
+        Text: fromHistory ? "history" : providerDisplayName(entry.provider)
+      }
+    ],
+    Actions: buildResultActions(entry.translatedText, sourceText, entry.provider)
+  }
+}
+
+async function buildHistoryResults(ctx: Context, searchText: string, settings: PluginSettings): Promise<Result[]> {
+  const entries = searchHistoryEntries(await loadHistory(ctx), searchText)
+  if (entries.length === 0) {
+    return [
+      {
+        Title: "No translation history",
+        SubTitle: searchText.trim() === "" ? "Translate something first." : `No history matched: ${searchText}`,
+        Icon: PLUGIN_ICON,
+        Score: 100
+      }
+    ]
+  }
+
+  return entries.map((entry, index) => buildTranslationResult(entry, entry.sourceText, settings, 100 - index, true, true))
+}
+
+function parseHistoryQuery(search: string): string | null {
+  const trimmed = search.trim()
+  const match = /^(history|his)(?:\s+(.*))?$/i.exec(trimmed)
+  if (!match) {
+    return null
+  }
+  return match[2]?.trim() ?? ""
+}
+
 export const plugin: Plugin = {
   init: async (ctx: Context, initParams: PluginInitParams) => {
     api = initParams.API
@@ -216,6 +279,10 @@ export const plugin: Plugin = {
   query: async (ctx: Context, query: Query): Promise<Result[]> => {
     const search = query.Type === "selection" ? query.Selection.Text : query.Search
     const settings = await loadSettings(ctx)
+    const historySearch = parseHistoryQuery(search)
+    if (historySearch !== null) {
+      return buildHistoryResults(ctx, historySearch, settings)
+    }
     const parsed = parseTranslationQuery(search, settings.defaultProvider)
 
     if (parsed.text === "") {

@@ -28,6 +28,8 @@
       "settings_openai_key": "OpenAI-compatible API key",
       "settings_openai_model": "OpenAI-compatible model",
       "settings_timeout": "Request timeout",
+      "settings_history_limit": "History limit",
+      "settings_history_limit_tip": "Maximum number of translation history entries to keep",
       "settings_show_preview_details": "Show source and provider details",
       "settings_show_preview_details_tip": "Show Source and Details sections in the result preview",
       "provider_microsoft": "Microsoft (no setup)",
@@ -206,6 +208,19 @@
         "Label": "i18n:settings_timeout",
         "DefaultValue": "10000",
         "Suffix": "ms",
+        "MaxLines": 1,
+        "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
+        "Style": { "Width": 220 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "history_limit",
+        "Label": "i18n:settings_history_limit",
+        "Tooltip": "i18n:settings_history_limit_tip",
+        "DefaultValue": "10",
+        "Suffix": "items",
         "MaxLines": 1,
         "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
         "Style": { "Width": 220 }

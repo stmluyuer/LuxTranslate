@@ -15,6 +15,7 @@ export interface PluginSettings {
   openaiModel: string
   requestTimeoutMs: number
   showPreviewDetails: boolean
+  historyLimit: number
 }
 
 export interface ParsedQuery {
@@ -43,6 +44,17 @@ export interface TranslationResponse {
   detectedSourceLanguage?: string
 }
 
+export interface TranslationHistoryEntry {
+  sourceText: string
+  translatedText: string
+  provider: TranslationProvider
+  providerName: string
+  sourceLanguage: "auto" | "en" | "zh"
+  targetLanguage: "en" | "zh"
+  detectedSourceLanguage?: string
+  timestamp: number
+}
+
 const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   ms: "microsoft",
   microsoft: "microsoft",
@@ -68,7 +80,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
   requestTimeoutMs: 10000,
-  showPreviewDetails: true
+  showPreviewDetails: true,
+  historyLimit: 10
 }
 
 export function normalizeProvider(value: string): TranslationProvider {
@@ -91,6 +104,74 @@ export function parseProviderList(value: string): TranslationProvider[] {
     }
   }
   return providers
+}
+
+export function parseHistoryEntries(value: string): TranslationHistoryEntry[] {
+  if (value.trim() === "") {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    return parsed.filter((item): item is TranslationHistoryEntry => {
+      if (typeof item !== "object" || item === null) {
+        return false
+      }
+      const candidate = item as Partial<TranslationHistoryEntry>
+      return (
+        typeof candidate.sourceText === "string" &&
+        typeof candidate.translatedText === "string" &&
+        typeof candidate.provider === "string" &&
+        typeof candidate.providerName === "string" &&
+        typeof candidate.sourceLanguage === "string" &&
+        typeof candidate.targetLanguage === "string" &&
+        typeof candidate.timestamp === "number"
+      )
+    })
+  } catch {
+    return []
+  }
+}
+
+export function historyKeyMatches(entry: TranslationHistoryEntry, provider: TranslationProvider, sourceText: string, direction: LanguageDirection): boolean {
+  return entry.provider === provider && entry.sourceText === sourceText && entry.sourceLanguage === direction.sourceLanguage && entry.targetLanguage === direction.targetLanguage
+}
+
+function sameHistoryEntry(left: TranslationHistoryEntry, right: TranslationHistoryEntry): boolean {
+  return left.provider === right.provider && left.sourceText === right.sourceText && left.sourceLanguage === right.sourceLanguage && left.targetLanguage === right.targetLanguage
+}
+
+export function trimHistoryEntries(entries: TranslationHistoryEntry[], historyLimit: number): TranslationHistoryEntry[] {
+  return entries.slice(0, Math.max(0, historyLimit))
+}
+
+export function upsertHistoryEntry(entries: TranslationHistoryEntry[], entry: TranslationHistoryEntry, historyLimit: number): TranslationHistoryEntry[] {
+  const withoutDuplicate = entries.filter(existing => !sameHistoryEntry(existing, entry))
+  return trimHistoryEntries(
+    [entry, ...withoutDuplicate].sort((left, right) => right.timestamp - left.timestamp),
+    historyLimit
+  )
+}
+
+function normalizeHistorySearchText(text: string): string {
+  return text.trim().toLowerCase()
+}
+
+export function searchHistoryEntries(entries: TranslationHistoryEntry[], query: string): TranslationHistoryEntry[] {
+  const normalizedQuery = normalizeHistorySearchText(query)
+  if (normalizedQuery === "") {
+    return entries
+  }
+
+  return entries.filter(entry => {
+    const source = normalizeHistorySearchText(entry.sourceText)
+    const translated = normalizeHistorySearchText(entry.translatedText)
+    return source.includes(normalizedQuery) || translated.includes(normalizedQuery)
+  })
 }
 
 export function parseTranslationQuery(search: string, defaultProvider: TranslationProvider): ParsedQuery {

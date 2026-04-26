@@ -1,0 +1,142 @@
+import {
+  DEFAULT_SETTINGS,
+  getMissingConfiguration,
+  parseTranslationQuery,
+  resolveLanguageDirection,
+  translateWithDeepL,
+  translateWithMicrosoft,
+  translateWithOpenAICompatible
+} from "../translate"
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(body)
+  } as Response
+}
+
+function firstFetchCall(fetchMock: jest.Mock): [string, RequestInit] {
+  return fetchMock.mock.calls[0] as [string, RequestInit]
+}
+
+function headersOf(init: RequestInit): Record<string, string> {
+  return init.headers as Record<string, string>
+}
+
+describe("query parsing", () => {
+  test("uses default provider when no provider command is present", () => {
+    expect(parseTranslationQuery("hello world", "microsoft")).toEqual({
+      provider: "microsoft",
+      text: "hello world",
+      forcedProvider: false
+    })
+  })
+
+  test("parses provider commands", () => {
+    expect(parseTranslationQuery("ms hello", "deepl")).toMatchObject({ provider: "microsoft", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("deepl hello", "microsoft")).toMatchObject({ provider: "deepl", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("ai hello", "microsoft")).toMatchObject({ provider: "wox_ai", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("openai hello", "microsoft")).toMatchObject({ provider: "openai_compatible", text: "hello", forcedProvider: true })
+  })
+})
+
+describe("language direction", () => {
+  test("translates English and non-Chinese text to Chinese", () => {
+    expect(resolveLanguageDirection("hello").targetLanguage).toBe("zh")
+    expect(resolveLanguageDirection("bonjour").deeplTarget).toBe("ZH")
+  })
+
+  test("translates Chinese text to English", () => {
+    const direction = resolveLanguageDirection("你好，世界")
+    expect(direction.targetLanguage).toBe("en")
+    expect(direction.deeplTarget).toBe("EN-US")
+  })
+})
+
+describe("configuration checks", () => {
+  test("reports missing provider settings", () => {
+    expect(getMissingConfiguration("microsoft", DEFAULT_SETTINGS)).toBeNull()
+    expect(getMissingConfiguration("deepl", DEFAULT_SETTINGS)).toContain("DeepL API key")
+    expect(getMissingConfiguration("openai_compatible", DEFAULT_SETTINGS)).toContain("OpenAI-compatible API key")
+  })
+})
+
+describe("provider requests", () => {
+  const originalFetch = global.fetch
+
+  afterEach(() => {
+    global.fetch = originalFetch
+    jest.useRealTimers()
+  })
+
+  test("calls Microsoft no-setup endpoint and parses response", async () => {
+    const fetchMock = jest.fn(async () =>
+      jsonResponse([
+        {
+          detectedLanguage: { language: "en" },
+          translations: [{ text: "你好" }]
+        }
+      ])
+    )
+    global.fetch = fetchMock as typeof fetch
+
+    const result = await translateWithMicrosoft({
+      text: "hello",
+      direction: resolveLanguageDirection("hello"),
+      settings: DEFAULT_SETTINGS
+    })
+
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toContain("api-edge.cognitive.microsofttranslator.com/translate")
+    expect(init.body).toBe(JSON.stringify([{ Text: "hello" }]))
+    expect(result.translatedText).toBe("你好")
+    expect(result.detectedSourceLanguage).toBe("en")
+  })
+
+  test("calls DeepL free endpoint with auth header and target language", async () => {
+    const fetchMock = jest.fn(async () => jsonResponse({ translations: [{ detected_source_language: "EN", text: "你好" }] }))
+    global.fetch = fetchMock as typeof fetch
+
+    const result = await translateWithDeepL({
+      text: "hello",
+      direction: resolveLanguageDirection("hello"),
+      settings: { ...DEFAULT_SETTINGS, deeplApiKey: "secret" }
+    })
+
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toBe("https://api-free.deepl.com/v2/translate")
+    expect(headersOf(init).Authorization).toBe("DeepL-Auth-Key secret")
+    expect(JSON.parse(init.body as string).target_lang).toBe("ZH")
+    expect(result.translatedText).toBe("你好")
+  })
+
+  test("calls OpenAI-compatible chat completions endpoint", async () => {
+    const fetchMock = jest.fn(async () => jsonResponse({ choices: [{ message: { content: "你好" } }] }))
+    global.fetch = fetchMock as typeof fetch
+
+    const result = await translateWithOpenAICompatible({
+      text: "hello",
+      direction: resolveLanguageDirection("hello"),
+      settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://example.com/v1/", openaiModel: "model-a" }
+    })
+
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toBe("https://example.com/v1/chat/completions")
+    expect(headersOf(init).Authorization).toBe("Bearer token")
+    expect(JSON.parse(init.body as string).model).toBe("model-a")
+    expect(result.translatedText).toBe("你好")
+  })
+
+  test("surfaces provider failures", async () => {
+    global.fetch = jest.fn(async () => jsonResponse({ error: "bad key" }, 403)) as typeof fetch
+
+    await expect(
+      translateWithDeepL({
+        text: "hello",
+        direction: resolveLanguageDirection("hello"),
+        settings: { ...DEFAULT_SETTINGS, deeplApiKey: "bad" }
+      })
+    ).rejects.toThrow("403")
+  })
+})

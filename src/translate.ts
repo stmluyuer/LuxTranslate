@@ -52,6 +52,8 @@ const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   openai_compatible: "openai_compatible"
 }
 
+let microsoftAuthToken = ""
+
 export const DEFAULT_SETTINGS: PluginSettings = {
   defaultProvider: "microsoft",
   defaultSourceLanguage: "auto",
@@ -182,12 +184,30 @@ function requireString(value: unknown, errorMessage: string): string {
 }
 
 export async function translateWithMicrosoft(request: TranslationRequest): Promise<TranslationResponse> {
+  if (microsoftAuthToken === "") {
+    const tokenResponse = await fetchWithTimeout(
+      "https://edge.microsoft.com/translate/auth",
+      {
+        method: "GET",
+        headers: {
+          Accept: "text/plain"
+        }
+      },
+      request.settings.requestTimeoutMs
+    )
+    microsoftAuthToken = requireString(await tokenResponse.text(), "Microsoft auth endpoint returned an empty token.")
+    if (!tokenResponse.ok) {
+      throw new Error(`Microsoft auth request failed with ${tokenResponse.status}: ${microsoftAuthToken}`)
+    }
+  }
+
   const url = `https://api-edge.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${encodeURIComponent(request.direction.microsoftTarget)}`
   const response = await fetchWithTimeout(
     url,
     {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${microsoftAuthToken}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify([{ Text: request.text }])

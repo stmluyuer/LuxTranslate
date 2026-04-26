@@ -63,14 +63,21 @@ describe("provider requests", () => {
   })
 
   test("calls Microsoft no-setup endpoint and parses response", async () => {
-    const fetchMock = jest.fn(async () =>
-      jsonResponse([
-        {
-          detectedLanguage: { language: "en" },
-          translations: [{ text: "你好" }]
-        }
-      ])
-    )
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => "edge-token"
+      } as Response)
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            detectedLanguage: { language: "en" },
+            translations: [{ text: "你好" }]
+          }
+        ])
+      )
     global.fetch = fetchMock as typeof fetch
 
     const result = await translateWithMicrosoft({
@@ -79,8 +86,10 @@ describe("provider requests", () => {
       settings: DEFAULT_SETTINGS
     })
 
-    const [url, init] = firstFetchCall(fetchMock)
+    expect(fetchMock.mock.calls[0][0]).toBe("https://edge.microsoft.com/translate/auth")
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
     expect(url).toContain("api-edge.cognitive.microsofttranslator.com/translate")
+    expect(headersOf(init).Authorization).toBe("Bearer edge-token")
     expect(init.body).toBe(JSON.stringify([{ Text: "hello" }]))
     expect(result.translatedText).toBe("你好")
     expect(result.detectedSourceLanguage).toBe("en")

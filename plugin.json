@@ -12,8 +12,14 @@
     "en_US": {
       "plugin_name": "Wox Translate",
       "plugin_description": "Translate text with Microsoft, DeepL, Wox AI, or OpenAI-compatible providers",
-      "settings_provider": "Provider",
-      "settings_provider_tip": "Default translation provider",
+      "settings_group_basic": "Basic behavior",
+      "settings_group_display": "Display and history",
+      "settings_group_deepl": "DeepL",
+      "settings_group_wox_ai": "Wox AI",
+      "settings_group_openai": "OpenAI-compatible",
+      "settings_group_advanced": "Advanced",
+      "settings_provider": "Default provider",
+      "settings_provider_tip": "Provider used by normal queries such as tr hello",
       "settings_visible_providers": "Visible providers",
       "settings_visible_providers_tip": "Choose one or more providers to display together. Leave empty to show only the default provider.",
       "settings_source": "Source language",
@@ -41,8 +47,16 @@
     "zh_CN": {
       "plugin_name": "Wox Translate",
       "plugin_description": "使用 Microsoft、DeepL、Wox AI 或 OpenAI 兼容接口翻译文本",
-      "settings_provider": "翻译源",
-      "settings_provider_tip": "默认翻译服务",
+      "settings_group_basic": "基础行为",
+      "settings_group_display": "显示与历史",
+      "settings_group_deepl": "DeepL",
+      "settings_group_wox_ai": "Wox AI",
+      "settings_group_openai": "OpenAI 兼容接口",
+      "settings_group_advanced": "高级设置",
+      "settings_provider": "默认翻译源",
+      "settings_provider_tip": "普通查询（如 tr hello）使用的翻译源",
+      "settings_visible_providers": "同时显示翻译源",
+      "settings_visible_providers_tip": "选择一个或多个翻译源同时展示。留空则只显示默认翻译源。",
       "settings_source": "源语言",
       "settings_source_tip": "除非翻译服务需要固定源语言，否则建议自动检测",
       "settings_target_policy": "目标语言策略",
@@ -55,6 +69,8 @@
       "settings_openai_key": "OpenAI 兼容 API Key",
       "settings_openai_model": "OpenAI 兼容模型",
       "settings_timeout": "请求超时",
+      "settings_history_limit": "历史记录条数",
+      "settings_history_limit_tip": "最多保留多少条翻译历史记录",
       "settings_show_preview_details": "显示原文和服务详情",
       "settings_show_preview_details_tip": "在结果预览中显示 Source 和 Details 区块",
       "provider_microsoft": "Microsoft（免配置）",
@@ -80,6 +96,13 @@
   ],
   "SettingDefinitions": [
     {
+      "Type": "head",
+      "Value": {
+        "Content": "i18n:settings_group_basic",
+        "Style": {}
+      }
+    },
+    {
       "Type": "select",
       "Value": {
         "Key": "default_provider",
@@ -99,8 +122,8 @@
       "Type": "select",
       "Value": {
         "Key": "visible_providers",
-        "Label": "同时显示翻译源",
-        "Tooltip": "选择一个或多个翻译源同时展示。留空则只显示默认翻译源。",
+        "Label": "i18n:settings_visible_providers",
+        "Tooltip": "i18n:settings_visible_providers_tip",
         "DefaultValue": "",
         "IsMulti": true,
         "Options": [
@@ -139,6 +162,51 @@
       }
     },
     {
+      "Type": "newline",
+      "Value": { "Style": {} }
+    },
+    {
+      "Type": "head",
+      "Value": {
+        "Content": "i18n:settings_group_display",
+        "Style": {}
+      }
+    },
+    {
+      "Type": "checkbox",
+      "Value": {
+        "Key": "show_preview_details",
+        "Label": "i18n:settings_show_preview_details",
+        "Tooltip": "i18n:settings_show_preview_details_tip",
+        "DefaultValue": "true",
+        "Style": { "Width": 320 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "history_limit",
+        "Label": "i18n:settings_history_limit",
+        "Tooltip": "i18n:settings_history_limit_tip",
+        "DefaultValue": "10",
+        "Suffix": "items",
+        "MaxLines": 1,
+        "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
+        "Style": { "Width": 220 }
+      }
+    },
+    {
+      "Type": "newline",
+      "Value": { "Style": {} }
+    },
+    {
+      "Type": "head",
+      "Value": {
+        "Content": "i18n:settings_group_deepl",
+        "Style": {}
+      }
+    },
+    {
       "Type": "select",
       "Value": {
         "Key": "deepl_plan",
@@ -162,6 +230,17 @@
       }
     },
     {
+      "Type": "newline",
+      "Value": { "Style": {} }
+    },
+    {
+      "Type": "head",
+      "Value": {
+        "Content": "i18n:settings_group_wox_ai",
+        "Style": {}
+      }
+    },
+    {
       "Type": "selectAIModel",
       "Value": {
         "Key": "wox_ai_model",
@@ -169,6 +248,17 @@
         "Tooltip": "i18n:settings_wox_ai_model_tip",
         "DefaultValue": "",
         "Style": { "Width": 500 }
+      }
+    },
+    {
+      "Type": "newline",
+      "Value": { "Style": {} }
+    },
+    {
+      "Type": "head",
+      "Value": {
+        "Content": "i18n:settings_group_openai",
+        "Style": {}
       }
     },
     {
@@ -202,6 +292,17 @@
       }
     },
     {
+      "Type": "newline",
+      "Value": { "Style": {} }
+    },
+    {
+      "Type": "head",
+      "Value": {
+        "Content": "i18n:settings_group_advanced",
+        "Style": {}
+      }
+    },
+    {
       "Type": "textbox",
       "Value": {
         "Key": "request_timeout_ms",
@@ -211,29 +312,6 @@
         "MaxLines": 1,
         "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
         "Style": { "Width": 220 }
-      }
-    },
-    {
-      "Type": "textbox",
-      "Value": {
-        "Key": "history_limit",
-        "Label": "i18n:settings_history_limit",
-        "Tooltip": "i18n:settings_history_limit_tip",
-        "DefaultValue": "10",
-        "Suffix": "items",
-        "MaxLines": 1,
-        "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
-        "Style": { "Width": 220 }
-      }
-    },
-    {
-      "Type": "checkbox",
-      "Value": {
-        "Key": "show_preview_details",
-        "Label": "i18n:settings_show_preview_details",
-        "Tooltip": "i18n:settings_show_preview_details_tip",
-        "DefaultValue": "true",
-        "Style": { "Width": 320 }
       }
     }
   ]

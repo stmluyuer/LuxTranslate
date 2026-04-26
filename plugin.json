@@ -10,11 +10,189 @@
   "MinWoxVersion": "2.0.0",
   "Runtime": "nodejs",
   "Website": "https://github.com/quanhui/Wox.Plugin.Translate",
+  "I18n": {
+    "en_US": {
+      "plugin_name": "Wox Translate",
+      "plugin_description": "Translate text with Microsoft, DeepL, Wox AI, or OpenAI-compatible providers",
+      "settings_provider": "Provider",
+      "settings_provider_tip": "Default translation provider",
+      "settings_source": "Source language",
+      "settings_source_tip": "Use auto detection unless a provider requires a fixed source language",
+      "settings_target_policy": "Target policy",
+      "settings_target_policy_tip": "Automatically translate Chinese to English and other text to Chinese",
+      "settings_deepl_plan": "DeepL plan",
+      "settings_deepl_key": "DeepL API key",
+      "settings_wox_ai_model": "Wox AI model",
+      "settings_wox_ai_model_tip": "Reserved for Wox AI model selection; current SDK uses Wox's active AI model",
+      "settings_openai_base_url": "OpenAI-compatible base URL",
+      "settings_openai_key": "OpenAI-compatible API key",
+      "settings_openai_model": "OpenAI-compatible model",
+      "settings_timeout": "Request timeout",
+      "provider_microsoft": "Microsoft (no setup)",
+      "provider_deepl": "DeepL",
+      "provider_wox_ai": "Wox AI",
+      "provider_openai": "OpenAI compatible",
+      "target_auto": "Chinese -> English, other -> Chinese"
+    },
+    "zh_CN": {
+      "plugin_name": "Wox Translate",
+      "plugin_description": "使用 Microsoft、DeepL、Wox AI 或 OpenAI 兼容接口翻译文本",
+      "settings_provider": "翻译源",
+      "settings_provider_tip": "默认翻译服务",
+      "settings_source": "源语言",
+      "settings_source_tip": "除非翻译服务需要固定源语言，否则建议自动检测",
+      "settings_target_policy": "目标语言策略",
+      "settings_target_policy_tip": "中文自动翻译为英文，其他文本自动翻译为中文",
+      "settings_deepl_plan": "DeepL 套餐",
+      "settings_deepl_key": "DeepL API Key",
+      "settings_wox_ai_model": "Wox AI 模型",
+      "settings_wox_ai_model_tip": "预留给 Wox AI 模型选择；当前 SDK 使用 Wox 当前 AI 模型",
+      "settings_openai_base_url": "OpenAI 兼容 Base URL",
+      "settings_openai_key": "OpenAI 兼容 API Key",
+      "settings_openai_model": "OpenAI 兼容模型",
+      "settings_timeout": "请求超时",
+      "provider_microsoft": "Microsoft（免配置）",
+      "provider_deepl": "DeepL",
+      "provider_wox_ai": "Wox AI",
+      "provider_openai": "OpenAI 兼容",
+      "target_auto": "中文 -> 英文，其他 -> 中文"
+    }
+  },
   "Entry": "index.js",
   "Icon": "relative:images/app.svg",
   "SupportedOS": [
     "windows",
     "linux",
     "darwin"
+  ],
+  "Features": [
+    {
+      "Name": "ai"
+    },
+    {
+      "Name": "debounce",
+      "Params": {
+        "IntervalMs": 300
+      }
+    }
+  ],
+  "SettingDefinitions": [
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "default_provider",
+        "Label": "i18n:settings_provider",
+        "Tooltip": "i18n:settings_provider_tip",
+        "DefaultValue": "microsoft",
+        "Options": [
+          { "Label": "i18n:provider_microsoft", "Value": "microsoft" },
+          { "Label": "i18n:provider_deepl", "Value": "deepl" },
+          { "Label": "i18n:provider_wox_ai", "Value": "wox_ai" },
+          { "Label": "i18n:provider_openai", "Value": "openai_compatible" }
+        ],
+        "Style": { "Width": 320 }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "default_source_language",
+        "Label": "i18n:settings_source",
+        "Tooltip": "i18n:settings_source_tip",
+        "DefaultValue": "auto",
+        "Options": [
+          { "Label": "Auto", "Value": "auto" },
+          { "Label": "English", "Value": "en" },
+          { "Label": "Chinese", "Value": "zh" }
+        ],
+        "Style": { "Width": 320 }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "default_target_policy",
+        "Label": "i18n:settings_target_policy",
+        "Tooltip": "i18n:settings_target_policy_tip",
+        "DefaultValue": "auto_zh_en",
+        "Options": [{ "Label": "i18n:target_auto", "Value": "auto_zh_en" }],
+        "Style": { "Width": 320 }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "deepl_plan",
+        "Label": "i18n:settings_deepl_plan",
+        "DefaultValue": "free",
+        "Options": [
+          { "Label": "Free", "Value": "free" },
+          { "Label": "Pro", "Value": "pro" }
+        ],
+        "Style": { "Width": 220 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "deepl_api_key",
+        "Label": "i18n:settings_deepl_key",
+        "DefaultValue": "",
+        "MaxLines": 1,
+        "Style": { "Width": 500 }
+      }
+    },
+    {
+      "Type": "selectAIModel",
+      "Value": {
+        "Key": "wox_ai_model",
+        "Label": "i18n:settings_wox_ai_model",
+        "Tooltip": "i18n:settings_wox_ai_model_tip",
+        "DefaultValue": "",
+        "Style": { "Width": 500 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "openai_base_url",
+        "Label": "i18n:settings_openai_base_url",
+        "DefaultValue": "https://api.openai.com/v1",
+        "MaxLines": 1,
+        "Style": { "Width": 500 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "openai_api_key",
+        "Label": "i18n:settings_openai_key",
+        "DefaultValue": "",
+        "MaxLines": 1,
+        "Style": { "Width": 500 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "openai_model",
+        "Label": "i18n:settings_openai_model",
+        "DefaultValue": "gpt-4o-mini",
+        "MaxLines": 1,
+        "Style": { "Width": 320 }
+      }
+    },
+    {
+      "Type": "textbox",
+      "Value": {
+        "Key": "request_timeout_ms",
+        "Label": "i18n:settings_timeout",
+        "DefaultValue": "10000",
+        "Suffix": "ms",
+        "MaxLines": 1,
+        "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
+        "Style": { "Width": 220 }
+      }
+    }
   ]
 }

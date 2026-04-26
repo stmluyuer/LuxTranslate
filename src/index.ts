@@ -1,5 +1,15 @@
 import { ActionContext, Context, Plugin, PluginInitParams, PublicAPI, Query, Result, WoxImage } from "@wox-launcher/wox-plugin"
-import { DEFAULT_SETTINGS, getMissingConfiguration, normalizeProvider, parseTranslationQuery, PluginSettings, resolveLanguageDirection, translateText, TranslationProvider } from "./translate"
+import {
+  DEFAULT_SETTINGS,
+  getMissingConfiguration,
+  normalizeProvider,
+  parseProviderList,
+  parseTranslationQuery,
+  PluginSettings,
+  resolveLanguageDirection,
+  translateText,
+  TranslationProvider
+} from "./translate"
 
 let api: PublicAPI
 
@@ -24,6 +34,7 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
+    visibleProviders: parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(","))),
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as "auto" | "en" | "zh",
     defaultTargetPolicy: "auto_zh_en",
     deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",
@@ -87,20 +98,10 @@ function buildConfigurationResult(message: string, provider: TranslationProvider
   }
 }
 
-function buildErrorResult(error: unknown, provider: TranslationProvider): Result {
+function errorMessageForProvider(error: unknown, provider: TranslationProvider): string {
   const message = error instanceof Error ? error.message : String(error)
   const suffix = provider === "microsoft" ? " The Microsoft no-setup provider uses an unofficial endpoint and may stop working." : ""
-  return {
-    Title: "Translation failed",
-    SubTitle: `${message}${suffix}`,
-    Icon: PLUGIN_ICON,
-    Score: 100,
-    Preview: {
-      PreviewType: "markdown",
-      PreviewData: `# Translation failed\n\n${message}${suffix}`,
-      PreviewProperties: {}
-    }
-  }
+  return `${message}${suffix}`
 }
 
 function buildResultActions(translatedText: string, sourceText: string, provider: TranslationProvider): Result["Actions"] {
@@ -148,6 +149,64 @@ function buildTranslationPreview(translatedText: string, sourceText: string, pro
   return [`# ${translatedText}`, "", "## Source", sourceText, "", "## Details", `- Provider: ${providerName}`, `- Direction: ${direction}`].join("\n")
 }
 
+async function translateProviderResult(ctx: Context, provider: TranslationProvider, sourceText: string, settings: PluginSettings, score: number, includeProviderInTitle: boolean): Promise<Result> {
+  const missingConfiguration = getMissingConfiguration(provider, settings)
+  if (missingConfiguration) {
+    return buildConfigurationResult(missingConfiguration, provider)
+  }
+
+  const direction = resolveLanguageDirection(sourceText, settings.defaultSourceLanguage)
+  try {
+    const translation = await translateText(api, ctx, provider, {
+      text: sourceText,
+      direction,
+      settings
+    })
+    const subtitleParts = [`Source: ${sourceText}`, `${direction.sourceLanguage} -> ${direction.targetLanguage}`, "Enter to copy"]
+    if (translation.detectedSourceLanguage) {
+      subtitleParts.splice(1, 0, `detected ${translation.detectedSourceLanguage}`)
+    }
+
+    return {
+      Title: includeProviderInTitle ? `${translation.providerName}: ${translation.translatedText}` : translation.translatedText,
+      SubTitle: subtitleParts.join(" | "),
+      Icon: PLUGIN_ICON,
+      Score: score,
+      Preview: {
+        PreviewType: "markdown",
+        PreviewData: buildTranslationPreview(
+          translation.translatedText,
+          sourceText,
+          translation.providerName,
+          `${direction.sourceLanguage} -> ${direction.targetLanguage}`,
+          settings.showPreviewDetails
+        ),
+        PreviewProperties: {}
+      },
+      Tails: [
+        {
+          Type: "text",
+          Text: providerDisplayName(provider)
+        }
+      ],
+      Actions: buildResultActions(translation.translatedText, sourceText, provider)
+    }
+  } catch (error) {
+    await api.Log(ctx, "Error", error instanceof Error ? error.stack || error.message : String(error))
+    return {
+      Title: `${providerDisplayName(provider)}: Translation failed`,
+      SubTitle: errorMessageForProvider(error, provider),
+      Icon: PLUGIN_ICON,
+      Score: score,
+      Preview: {
+        PreviewType: "markdown",
+        PreviewData: `# ${providerDisplayName(provider)} translation failed\n\n${errorMessageForProvider(error, provider)}`,
+        PreviewProperties: {}
+      }
+    }
+  }
+}
+
 export const plugin: Plugin = {
   init: async (ctx: Context, initParams: PluginInitParams) => {
     api = initParams.API
@@ -163,52 +222,7 @@ export const plugin: Plugin = {
       return [buildHelpResult()]
     }
 
-    const missingConfiguration = getMissingConfiguration(parsed.provider, settings)
-    if (missingConfiguration) {
-      return [buildConfigurationResult(missingConfiguration, parsed.provider)]
-    }
-
-    const direction = resolveLanguageDirection(parsed.text, settings.defaultSourceLanguage)
-    try {
-      const translation = await translateText(api, ctx, parsed.provider, {
-        text: parsed.text,
-        direction,
-        settings
-      })
-      const subtitleParts = [`${translation.providerName}`, `${direction.sourceLanguage} -> ${direction.targetLanguage}`, "Enter to copy"]
-      if (translation.detectedSourceLanguage) {
-        subtitleParts.splice(1, 0, `detected ${translation.detectedSourceLanguage}`)
-      }
-
-      return [
-        {
-          Title: translation.translatedText,
-          SubTitle: subtitleParts.join(" | "),
-          Icon: PLUGIN_ICON,
-          Score: 100,
-          Preview: {
-            PreviewType: "markdown",
-            PreviewData: buildTranslationPreview(
-              translation.translatedText,
-              parsed.text,
-              translation.providerName,
-              `${direction.sourceLanguage} -> ${direction.targetLanguage}`,
-              settings.showPreviewDetails
-            ),
-            PreviewProperties: {}
-          },
-          Tails: [
-            {
-              Type: "text",
-              Text: parsed.forcedProvider ? providerDisplayName(parsed.provider) : "default"
-            }
-          ],
-          Actions: buildResultActions(translation.translatedText, parsed.text, parsed.provider)
-        }
-      ]
-    } catch (error) {
-      await api.Log(ctx, "Error", error instanceof Error ? error.stack || error.message : String(error))
-      return [buildErrorResult(error, parsed.provider)]
-    }
+    const providers = parsed.forcedProvider || settings.visibleProviders.length === 0 ? [parsed.provider] : settings.visibleProviders
+    return Promise.all(providers.map((provider, index) => translateProviderResult(ctx, provider, parsed.text, settings, 100 - index, providers.length > 1)))
   }
 }

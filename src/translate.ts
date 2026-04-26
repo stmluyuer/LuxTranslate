@@ -4,6 +4,7 @@ export type TranslationProvider = "microsoft" | "deepl" | "wox_ai" | "openai_com
 
 export interface PluginSettings {
   defaultProvider: TranslationProvider
+  visibleProviders: TranslationProvider[]
   defaultSourceLanguage: "auto" | "en" | "zh"
   defaultTargetPolicy: "auto_zh_en"
   deeplPlan: "free" | "pro"
@@ -57,6 +58,7 @@ let microsoftAuthToken = ""
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   defaultProvider: "microsoft",
+  visibleProviders: [],
   defaultSourceLanguage: "auto",
   defaultTargetPolicy: "auto_zh_en",
   deeplPlan: "free",
@@ -74,6 +76,21 @@ export function normalizeProvider(value: string): TranslationProvider {
     return value
   }
   return DEFAULT_SETTINGS.defaultProvider
+}
+
+export function parseProviderList(value: string): TranslationProvider[] {
+  const providers: TranslationProvider[] = []
+  for (const rawValue of value.split(",")) {
+    const trimmed = rawValue.trim()
+    if (trimmed === "") {
+      continue
+    }
+    const provider = normalizeProvider(trimmed)
+    if (!providers.includes(provider)) {
+      providers.push(provider)
+    }
+  }
+  return providers
 }
 
 export function parseTranslationQuery(search: string, defaultProvider: TranslationProvider): ParsedQuery {

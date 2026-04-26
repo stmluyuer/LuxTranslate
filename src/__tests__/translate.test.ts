@@ -1,4 +1,13 @@
-import { DEFAULT_SETTINGS, getMissingConfiguration, parseTranslationQuery, resolveLanguageDirection, translateWithDeepL, translateWithMicrosoft, translateWithOpenAICompatible } from "../translate"
+import {
+  DEFAULT_SETTINGS,
+  getMissingConfiguration,
+  parseProviderList,
+  parseTranslationQuery,
+  resolveLanguageDirection,
+  translateWithDeepL,
+  translateWithMicrosoft,
+  translateWithOpenAICompatible
+} from "../translate"
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -30,6 +39,11 @@ describe("query parsing", () => {
     expect(parseTranslationQuery("deepl hello", "microsoft")).toMatchObject({ provider: "deepl", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("ai hello", "microsoft")).toMatchObject({ provider: "wox_ai", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("openai hello", "microsoft")).toMatchObject({ provider: "openai_compatible", text: "hello", forcedProvider: true })
+  })
+
+  test("parses visible provider lists", () => {
+    expect(parseProviderList("microsoft,openai_compatible,deepl,openai_compatible")).toEqual(["microsoft", "openai_compatible", "deepl"])
+    expect(parseProviderList("")).toEqual([])
   })
 })
 

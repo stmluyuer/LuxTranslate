@@ -14,6 +14,8 @@
       "plugin_description": "Translate text with Microsoft, DeepL, Wox AI, or OpenAI-compatible providers",
       "settings_provider": "Provider",
       "settings_provider_tip": "Default translation provider",
+      "settings_visible_providers": "Visible providers",
+      "settings_visible_providers_tip": "Choose one or more providers to display together. Leave empty to show only the default provider.",
       "settings_source": "Source language",
       "settings_source_tip": "Use auto detection unless a provider requires a fixed source language",
       "settings_target_policy": "Target policy",
@@ -89,6 +91,23 @@
           { "Label": "i18n:provider_openai", "Value": "openai_compatible" }
         ],
         "Style": { "Width": 320 }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "visible_providers",
+        "Label": "同时显示翻译源",
+        "Tooltip": "选择一个或多个翻译源同时展示。留空则只显示默认翻译源。",
+        "DefaultValue": "",
+        "IsMulti": true,
+        "Options": [
+          { "Label": "i18n:provider_microsoft", "Value": "microsoft" },
+          { "Label": "i18n:provider_deepl", "Value": "deepl" },
+          { "Label": "i18n:provider_wox_ai", "Value": "wox_ai" },
+          { "Label": "i18n:provider_openai", "Value": "openai_compatible" }
+        ],
+        "Style": { "Width": 420 }
       }
     },
     {

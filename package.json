@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.18.1",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/quanhui/LuxTranslate.git"
+    "url": "git+https://github.com/stmluyuer/LuxTranslate.git"
   },
   "scripts": {
     "lint": "eslint src",

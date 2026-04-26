@@ -36,7 +36,7 @@ LuxTranslate 将翻译源分为三类：
 当前优先提供 GitHub 源码发布。Wox Store 发布会在后续准备。
 
 ```bash
-git clone https://github.com/quanhui/LuxTranslate.git
+git clone https://github.com/stmluyuer/LuxTranslate.git
 cd LuxTranslate
 pnpm install
 pnpm build
@@ -140,7 +140,7 @@ Notes:
 The first release target is GitHub source distribution. Wox Store packaging can be prepared later.
 
 ```bash
-git clone https://github.com/quanhui/LuxTranslate.git
+git clone https://github.com/stmluyuer/LuxTranslate.git
 cd LuxTranslate
 pnpm install
 pnpm build

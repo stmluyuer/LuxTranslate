@@ -1,8 +1,6 @@
 {
   "Id": "263fa95c-db99-4dc8-be68-784b5ae421f8",
-  "TriggerKeywords": [
-    "tr"
-  ],
+  "TriggerKeywords": ["tr"],
   "Name": "i18n:plugin_name",
   "Description": "i18n:plugin_description",
   "Author": "quanhui",
@@ -60,11 +58,7 @@
   },
   "Entry": "index.js",
   "Icon": "relative:images/app.svg",
-  "SupportedOS": [
-    "windows",
-    "linux",
-    "darwin"
-  ],
+  "SupportedOS": ["windows", "linux", "darwin"],
   "Features": [
     {
       "Name": "ai"

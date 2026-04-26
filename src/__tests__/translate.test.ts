@@ -1,12 +1,4 @@
-import {
-  DEFAULT_SETTINGS,
-  getMissingConfiguration,
-  parseTranslationQuery,
-  resolveLanguageDirection,
-  translateWithDeepL,
-  translateWithMicrosoft,
-  translateWithOpenAICompatible
-} from "../translate"
+import { DEFAULT_SETTINGS, getMissingConfiguration, parseTranslationQuery, resolveLanguageDirection, translateWithDeepL, translateWithMicrosoft, translateWithOpenAICompatible } from "../translate"
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {

@@ -1,14 +1,5 @@
 import { ActionContext, Context, Plugin, PluginInitParams, PublicAPI, Query, Result, WoxImage } from "@wox-launcher/wox-plugin"
-import {
-  DEFAULT_SETTINGS,
-  getMissingConfiguration,
-  normalizeProvider,
-  parseTranslationQuery,
-  PluginSettings,
-  resolveLanguageDirection,
-  translateText,
-  TranslationProvider
-} from "./translate"
+import { DEFAULT_SETTINGS, getMissingConfiguration, normalizeProvider, parseTranslationQuery, PluginSettings, resolveLanguageDirection, translateText, TranslationProvider } from "./translate"
 
 let api: PublicAPI
 
@@ -21,7 +12,7 @@ async function getSetting(ctx: Context, key: string, fallback: string): Promise<
   try {
     const value = await api.GetSetting(ctx, key)
     return value.trim() === "" ? fallback : value.trim()
-  } catch (_) {
+  } catch {
     return fallback
   }
 }
@@ -66,7 +57,15 @@ function buildHelpResult(): Result {
     Score: 100,
     Preview: {
       PreviewType: "markdown",
-      PreviewData: ["# Wox Translate", "", "- `tr hello` uses your default provider.", "- `tr ms hello` uses Microsoft.", "- `tr deepl hello` uses DeepL.", "- `tr ai hello` uses Wox AI.", "- `tr openai hello` uses OpenAI-compatible chat completions."].join("\n"),
+      PreviewData: [
+        "# Wox Translate",
+        "",
+        "- `tr hello` uses your default provider.",
+        "- `tr ms hello` uses Microsoft.",
+        "- `tr deepl hello` uses DeepL.",
+        "- `tr ai hello` uses Wox AI.",
+        "- `tr openai hello` uses OpenAI-compatible chat completions."
+      ].join("\n"),
       PreviewProperties: {}
     }
   }
@@ -179,7 +178,16 @@ export const plugin: Plugin = {
           Score: 100,
           Preview: {
             PreviewType: "markdown",
-            PreviewData: [`# ${translation.translatedText}`, "", "## Source", parsed.text, "", "## Details", `- Provider: ${translation.providerName}`, `- Direction: ${direction.sourceLanguage} -> ${direction.targetLanguage}`].join("\n"),
+            PreviewData: [
+              `# ${translation.translatedText}`,
+              "",
+              "## Source",
+              parsed.text,
+              "",
+              "## Details",
+              `- Provider: ${translation.providerName}`,
+              `- Direction: ${direction.sourceLanguage} -> ${direction.targetLanguage}`
+            ].join("\n"),
             PreviewProperties: {}
           },
           Tails: [

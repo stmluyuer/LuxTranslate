@@ -5,8 +5,8 @@
   "scripts": {
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*\" \"**/*.json\" README.md",
-    "build": "make build",
-    "test": "jest"
+    "build": "node scripts/build.mjs",
+    "test": "jest --runInBand"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.7",

@@ -260,7 +260,7 @@ function buildTranslationPrompt(text: string, targetLabel: string): AI.Conversat
 export async function translateWithWoxAI(api: PublicAPI, ctx: Context, request: TranslationRequest): Promise<TranslationResponse> {
   let finalText = ""
   await Promise.race([
-    api.LLMStream(ctx, buildTranslationPrompt(request.text, request.direction.targetLabel), (data) => {
+    api.LLMStream(ctx, buildTranslationPrompt(request.text, request.direction.targetLabel), data => {
       if (data.Status === "error") {
         throw new Error(data.Data)
       }
@@ -291,7 +291,7 @@ export async function translateWithOpenAICompatible(request: TranslationRequest)
       },
       body: JSON.stringify({
         model: request.settings.openaiModel,
-        messages: buildTranslationPrompt(request.text, request.direction.targetLabel).map((conversation) => ({
+        messages: buildTranslationPrompt(request.text, request.direction.targetLabel).map(conversation => ({
           role: conversation.Role,
           content: conversation.Text
         })),

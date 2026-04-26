@@ -44,7 +44,6 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const historyLimitRaw = await getSetting(ctx, "history_limit", String(DEFAULT_SETTINGS.historyLimit))
   const historyLimit = Number.parseInt(historyLimitRaw, 10)
   const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
-  const providerTableValue = await getSetting(ctx, "provider_table", "")
   const noSetupProviderTableValue = await getSetting(ctx, "no_setup_provider_table", "")
   const llmProviderTableValue = await getSetting(ctx, "llm_provider_table", "")
   const visibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
@@ -55,7 +54,7 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
     visibleProviders,
-    providerRows: [...parseProviderTableRows(providerTableValue), ...parseProviderTableRows(noSetupProviderTableValue), ...parseProviderTableRows(llmProviderTableValue)],
+    providerRows: [...parseProviderTableRows(noSetupProviderTableValue), ...parseProviderTableRows(llmProviderTableValue)],
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as LanguageCode,
     defaultTargetLanguage: normalizeLanguageCode(targetLanguageRaw) as LanguageCode,
     pairLanguage: normalizeLanguageCode(pairLanguageRaw) as LanguageCode,

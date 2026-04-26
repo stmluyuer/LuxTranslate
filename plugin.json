@@ -312,6 +312,152 @@
       }
     },
     {
+      "Type": "select",
+      "Value": {
+        "Key": "default_source_language",
+        "Label": "i18n:settings_source",
+        "Tooltip": "i18n:settings_source_tip",
+        "DefaultValue": "auto",
+        "Options": [
+          {
+            "Label": "i18n:lang_auto",
+            "Value": "auto"
+          },
+          {
+            "Label": "i18n:lang_zh",
+            "Value": "zh"
+          },
+          {
+            "Label": "i18n:lang_en",
+            "Value": "en"
+          },
+          {
+            "Label": "i18n:lang_ja",
+            "Value": "ja"
+          },
+          {
+            "Label": "i18n:lang_ko",
+            "Value": "ko"
+          },
+          {
+            "Label": "i18n:lang_ru",
+            "Value": "ru"
+          },
+          {
+            "Label": "i18n:lang_ar",
+            "Value": "ar"
+          },
+          {
+            "Label": "i18n:lang_fr",
+            "Value": "fr"
+          },
+          {
+            "Label": "i18n:lang_de",
+            "Value": "de"
+          }
+        ],
+        "Style": {
+          "Width": 320
+        }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "default_target_language",
+        "Label": "i18n:settings_target_language",
+        "Tooltip": "i18n:settings_target_language_tip",
+        "DefaultValue": "auto",
+        "Options": [
+          {
+            "Label": "i18n:lang_auto",
+            "Value": "auto"
+          },
+          {
+            "Label": "i18n:lang_zh",
+            "Value": "zh"
+          },
+          {
+            "Label": "i18n:lang_en",
+            "Value": "en"
+          },
+          {
+            "Label": "i18n:lang_ja",
+            "Value": "ja"
+          },
+          {
+            "Label": "i18n:lang_ko",
+            "Value": "ko"
+          },
+          {
+            "Label": "i18n:lang_ru",
+            "Value": "ru"
+          },
+          {
+            "Label": "i18n:lang_ar",
+            "Value": "ar"
+          },
+          {
+            "Label": "i18n:lang_fr",
+            "Value": "fr"
+          },
+          {
+            "Label": "i18n:lang_de",
+            "Value": "de"
+          }
+        ],
+        "Style": {
+          "Width": 320
+        }
+      }
+    },
+    {
+      "Type": "select",
+      "Value": {
+        "Key": "pair_language",
+        "Label": "i18n:settings_pair_language",
+        "Tooltip": "i18n:settings_pair_language_tip",
+        "DefaultValue": "en",
+        "Options": [
+          {
+            "Label": "i18n:lang_zh",
+            "Value": "zh"
+          },
+          {
+            "Label": "i18n:lang_en",
+            "Value": "en"
+          },
+          {
+            "Label": "i18n:lang_ja",
+            "Value": "ja"
+          },
+          {
+            "Label": "i18n:lang_ko",
+            "Value": "ko"
+          },
+          {
+            "Label": "i18n:lang_ru",
+            "Value": "ru"
+          },
+          {
+            "Label": "i18n:lang_ar",
+            "Value": "ar"
+          },
+          {
+            "Label": "i18n:lang_fr",
+            "Value": "fr"
+          },
+          {
+            "Label": "i18n:lang_de",
+            "Value": "de"
+          }
+        ],
+        "Style": {
+          "Width": 320
+        }
+      }
+    },
+    {
       "Type": "newline",
       "Value": {
         "Style": {}
@@ -480,158 +626,6 @@
         "Style": {
           "Width": 720
         }
-      }
-    },
-    {
-      "Type": "select",
-      "Value": {
-        "Key": "default_source_language",
-        "Label": "i18n:settings_source",
-        "Tooltip": "i18n:settings_source_tip",
-        "DefaultValue": "auto",
-        "Options": [
-          {
-            "Label": "i18n:lang_auto",
-            "Value": "auto"
-          },
-          {
-            "Label": "i18n:lang_zh",
-            "Value": "zh"
-          },
-          {
-            "Label": "i18n:lang_en",
-            "Value": "en"
-          },
-          {
-            "Label": "i18n:lang_ja",
-            "Value": "ja"
-          },
-          {
-            "Label": "i18n:lang_ko",
-            "Value": "ko"
-          },
-          {
-            "Label": "i18n:lang_ru",
-            "Value": "ru"
-          },
-          {
-            "Label": "i18n:lang_ar",
-            "Value": "ar"
-          },
-          {
-            "Label": "i18n:lang_fr",
-            "Value": "fr"
-          },
-          {
-            "Label": "i18n:lang_de",
-            "Value": "de"
-          }
-        ],
-        "Style": {
-          "Width": 320
-        }
-      }
-    },
-    {
-      "Type": "select",
-      "Value": {
-        "Key": "default_target_language",
-        "Label": "i18n:settings_target_language",
-        "Tooltip": "i18n:settings_target_language_tip",
-        "DefaultValue": "auto",
-        "Options": [
-          {
-            "Label": "i18n:lang_auto",
-            "Value": "auto"
-          },
-          {
-            "Label": "i18n:lang_zh",
-            "Value": "zh"
-          },
-          {
-            "Label": "i18n:lang_en",
-            "Value": "en"
-          },
-          {
-            "Label": "i18n:lang_ja",
-            "Value": "ja"
-          },
-          {
-            "Label": "i18n:lang_ko",
-            "Value": "ko"
-          },
-          {
-            "Label": "i18n:lang_ru",
-            "Value": "ru"
-          },
-          {
-            "Label": "i18n:lang_ar",
-            "Value": "ar"
-          },
-          {
-            "Label": "i18n:lang_fr",
-            "Value": "fr"
-          },
-          {
-            "Label": "i18n:lang_de",
-            "Value": "de"
-          }
-        ],
-        "Style": {
-          "Width": 320
-        }
-      }
-    },
-    {
-      "Type": "select",
-      "Value": {
-        "Key": "pair_language",
-        "Label": "i18n:settings_pair_language",
-        "Tooltip": "i18n:settings_pair_language_tip",
-        "DefaultValue": "en",
-        "Options": [
-          {
-            "Label": "i18n:lang_zh",
-            "Value": "zh"
-          },
-          {
-            "Label": "i18n:lang_en",
-            "Value": "en"
-          },
-          {
-            "Label": "i18n:lang_ja",
-            "Value": "ja"
-          },
-          {
-            "Label": "i18n:lang_ko",
-            "Value": "ko"
-          },
-          {
-            "Label": "i18n:lang_ru",
-            "Value": "ru"
-          },
-          {
-            "Label": "i18n:lang_ar",
-            "Value": "ar"
-          },
-          {
-            "Label": "i18n:lang_fr",
-            "Value": "fr"
-          },
-          {
-            "Label": "i18n:lang_de",
-            "Value": "de"
-          }
-        ],
-        "Style": {
-          "Width": 320
-        }
-      }
-    },
-    {
-      "Type": "newline",
-      "Value": {
-        "Style": {}
       }
     },
     {

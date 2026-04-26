@@ -7,11 +7,11 @@
   "Version": "0.1.0",
   "MinWoxVersion": "2.0.0",
   "Runtime": "nodejs",
-  "Website": "https://github.com/quanhui/Wox.Plugin.Translate",
+  "Website": "https://github.com/quanhui/LuxTranslate",
   "I18n": {
     "en_US": {
-      "plugin_name": "Wox Translate",
-      "plugin_description": "Translate text with Microsoft, DeepL, Wox AI, or OpenAI-compatible providers",
+      "plugin_name": "LuxTranslate",
+      "plugin_description": "Translate text in Wox with no-setup providers, large language models, and Wox AI",
       "settings_group_basic": "Basic behavior",
       "settings_group_no_setup": "No-setup translation",
       "settings_group_llm": "Large language models",
@@ -93,8 +93,8 @@
       "target_auto": "Chinese -> English, other -> Chinese"
     },
     "zh_CN": {
-      "plugin_name": "Wox Translate",
-      "plugin_description": "使用 Microsoft、DeepL、Wox AI 或 OpenAI 兼容接口翻译文本",
+      "plugin_name": "LuxTranslate",
+      "plugin_description": "在 Wox 中使用免配置翻译源、大模型和 Wox AI 翻译文本",
       "settings_group_basic": "基础行为",
       "settings_group_no_setup": "免配置翻译",
       "settings_group_llm": "大模型翻译",

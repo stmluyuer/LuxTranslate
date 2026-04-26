@@ -1,6 +1,6 @@
 .PHONY: help init check-init check-dev-deps install reinstall clean lint format build test package dev
 
-PLUGIN_NAME := translate
+PLUGIN_NAME := luxtranslate
 
 DIST_DIR := dist
 SRC_DIR := src

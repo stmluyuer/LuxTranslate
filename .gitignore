@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.pnpm-store/
 
 # Build and coverage output
 dist/
@@ -7,16 +8,33 @@ coverage/
 .nyc_output/
 *.wox
 *.zip
+*.tgz
+
+# Tool caches
+.eslintcache
+*.tsbuildinfo
+.turbo/
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
 
 # Local editor/system files
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db
 
 # Local runtime data and secrets
-*.log
 .env
 .env.*
 !.env.example
 tmp/
 temp/
+
+# Wox local runtime data
+.wox/
+wox-user/

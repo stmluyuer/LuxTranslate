@@ -166,7 +166,7 @@ function buildConfigurationResult(message: string, provider: TranslationProvider
     Score: 100,
     Preview: {
       PreviewType: "markdown",
-      PreviewData: `# Configuration required\n\n${message}\n\nOpen Wox plugin settings and update Wox Translate.`,
+      PreviewData: `# Configuration required\n\n${message}\n\nOpen Wox plugin settings and update LuxTranslate.`,
       PreviewProperties: {}
     }
   }
@@ -345,7 +345,7 @@ function parseHistoryQuery(search: string): string | null {
 export const plugin: Plugin = {
   init: async (ctx: Context, initParams: PluginInitParams) => {
     api = initParams.API
-    await api.Log(ctx, "Info", "Wox Translate initialized")
+    await api.Log(ctx, "Info", "LuxTranslate initialized")
   },
 
   query: async (ctx: Context, query: Query): Promise<Result[]> => {

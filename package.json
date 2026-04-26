@@ -1,7 +1,13 @@
 {
-  "name": "wox-plugin-translate",
+  "name": "lux-translate",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.18.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quanhui/LuxTranslate.git"
+  },
   "scripts": {
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*\" \"**/*.json\" README.md",

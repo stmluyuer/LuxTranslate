@@ -6,6 +6,7 @@ import {
   normalizeProvider,
   parseHistoryEntries,
   parseProviderList,
+  parseProviderTableProviders,
   parseTranslationQuery,
   PluginSettings,
   resolveLanguageDirection,
@@ -40,10 +41,12 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const historyLimitRaw = await getSetting(ctx, "history_limit", String(DEFAULT_SETTINGS.historyLimit))
   const historyLimit = Number.parseInt(historyLimitRaw, 10)
   const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
+  const tableProviders = parseProviderTableProviders(await getSetting(ctx, "provider_table", ""))
+  const legacyVisibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
-    visibleProviders: parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(","))),
+    visibleProviders: tableProviders.length > 0 ? tableProviders : legacyVisibleProviders,
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as "auto" | "en" | "zh",
     defaultTargetPolicy: "auto_zh_en",
     deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",

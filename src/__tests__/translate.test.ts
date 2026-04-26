@@ -4,6 +4,7 @@ import {
   historyKeyMatches,
   parseHistoryEntries,
   parseProviderList,
+  parseProviderTableProviders,
   parseTranslationQuery,
   resolveLanguageDirection,
   searchHistoryEntries,
@@ -48,6 +49,19 @@ describe("query parsing", () => {
   test("parses visible provider lists", () => {
     expect(parseProviderList("microsoft,openai_compatible,deepl,openai_compatible")).toEqual(["microsoft", "openai_compatible", "deepl"])
     expect(parseProviderList("")).toEqual([])
+  })
+
+  test("parses enabled providers from provider table rows", () => {
+    expect(
+      parseProviderTableProviders(
+        JSON.stringify([
+          { enabled: false, provider: "microsoft" },
+          { enabled: "true", provider: "deepl" },
+          { enabled: true, provider: "openai_compatible" },
+          { enabled: true, provider: "unknown" }
+        ])
+      )
+    ).toEqual(["deepl", "openai_compatible"])
   })
 })
 

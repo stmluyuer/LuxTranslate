@@ -55,6 +55,13 @@ export interface TranslationHistoryEntry {
   timestamp: number
 }
 
+export interface ProviderTableRow {
+  enabled?: boolean | string
+  provider?: string
+  name?: string
+  note?: string
+}
+
 const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   ms: "microsoft",
   microsoft: "microsoft",
@@ -91,6 +98,10 @@ export function normalizeProvider(value: string): TranslationProvider {
   return DEFAULT_SETTINGS.defaultProvider
 }
 
+function isTranslationProvider(value: string): value is TranslationProvider {
+  return value === "microsoft" || value === "deepl" || value === "wox_ai" || value === "openai_compatible"
+}
+
 export function parseProviderList(value: string): TranslationProvider[] {
   const providers: TranslationProvider[] = []
   for (const rawValue of value.split(",")) {
@@ -104,6 +115,35 @@ export function parseProviderList(value: string): TranslationProvider[] {
     }
   }
   return providers
+}
+
+function isEnabledTableValue(value: unknown): boolean {
+  return value === true || value === "true"
+}
+
+export function parseProviderTableProviders(value: string): TranslationProvider[] {
+  if (value.trim() === "") {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    const providers: TranslationProvider[] = []
+    for (const row of parsed as ProviderTableRow[]) {
+      const provider = typeof row.provider === "string" ? row.provider : ""
+      if (!isEnabledTableValue(row.enabled) || !isTranslationProvider(provider) || providers.includes(provider)) {
+        continue
+      }
+      providers.push(provider)
+    }
+    return providers
+  } catch {
+    return []
+  }
 }
 
 export function parseHistoryEntries(value: string): TranslationHistoryEntry[] {

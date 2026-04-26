@@ -1,6 +1,6 @@
 import { AI, Context, PublicAPI } from "@wox-launcher/wox-plugin"
 
-export type TranslationProvider = "microsoft" | "deepl" | "wox_ai" | "openai_compatible"
+export type TranslationProvider = "microsoft" | "youdao" | "caiyun" | "openai" | "claude" | "deepseek" | "llm_custom" | "wox_ai" | "deepl" | "openai_compatible"
 
 export interface PluginSettings {
   defaultProvider: TranslationProvider
@@ -70,12 +70,22 @@ export interface ProviderTableRow {
 const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   ms: "microsoft",
   microsoft: "microsoft",
+  youdao: "youdao",
+  yd: "youdao",
+  caiyun: "caiyun",
+  cy: "caiyun",
   deepl: "deepl",
   ai: "wox_ai",
   wox_ai: "wox_ai",
   woxai: "wox_ai",
-  openai: "openai_compatible",
-  openai_compatible: "openai_compatible"
+  openai: "openai",
+  claude: "claude",
+  anthropic: "claude",
+  deepseek: "deepseek",
+  custom: "llm_custom",
+  llm: "llm_custom",
+  llm_custom: "llm_custom",
+  openai_compatible: "llm_custom"
 }
 
 let microsoftAuthToken = ""
@@ -98,14 +108,25 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 }
 
 export function normalizeProvider(value: string): TranslationProvider {
-  if (value === "deepl" || value === "wox_ai" || value === "openai_compatible" || value === "microsoft") {
+  if (isTranslationProvider(value)) {
     return value
   }
   return DEFAULT_SETTINGS.defaultProvider
 }
 
 function isTranslationProvider(value: string): value is TranslationProvider {
-  return value === "microsoft" || value === "deepl" || value === "wox_ai" || value === "openai_compatible"
+  return (
+    value === "microsoft" ||
+    value === "youdao" ||
+    value === "caiyun" ||
+    value === "openai" ||
+    value === "claude" ||
+    value === "deepseek" ||
+    value === "llm_custom" ||
+    value === "wox_ai" ||
+    value === "deepl" ||
+    value === "openai_compatible"
+  )
 }
 
 export function parseProviderList(value: string): TranslationProvider[] {
@@ -288,11 +309,11 @@ export function getMissingConfiguration(provider: TranslationProvider, settings:
   if (provider === "deepl" && settings.deeplApiKey.trim() === "") {
     return "DeepL API key is required for DeepL translation."
   }
-  if (provider === "openai_compatible" && settings.openaiApiKey.trim() === "") {
-    return "OpenAI-compatible API key is required for OpenAI-compatible translation."
+  if (["openai", "claude", "deepseek", "llm_custom", "openai_compatible"].includes(provider) && settings.openaiApiKey.trim() === "") {
+    return "API key is required for this large language model provider."
   }
-  if (provider === "openai_compatible" && settings.openaiModel.trim() === "") {
-    return "OpenAI-compatible model is required."
+  if (["openai", "claude", "deepseek", "llm_custom", "openai_compatible"].includes(provider) && settings.openaiModel.trim() === "") {
+    return "Model is required for this large language model provider."
   }
   return null
 }
@@ -406,6 +427,34 @@ export async function translateWithDeepL(request: TranslationRequest): Promise<T
   }
 }
 
+export async function translateWithYoudao(request: TranslationRequest): Promise<TranslationResponse> {
+  const response = await fetchWithTimeout(
+    `https://dict.youdao.com/jsonapi_s?doctype=json&jsonversion=4&q=${encodeURIComponent(request.text)}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json"
+      }
+    },
+    request.settings.requestTimeoutMs
+  )
+  const json = (await parseJsonResponse(response, "Youdao")) as {
+    fanyi?: { tran?: string }
+    ec?: { word?: Array<{ trs?: Array<{ tr?: Array<{ l?: { i?: string[] } }> }> }> }
+  }
+  const dictionaryText = json.ec?.word?.[0]?.trs?.[0]?.tr?.[0]?.l?.i?.join("; ")
+  const translatedText = requireString(json.fanyi?.tran || dictionaryText, "Youdao returned an empty translation.")
+
+  return {
+    translatedText,
+    providerName: "Youdao"
+  }
+}
+
+export async function translateWithCaiyun(): Promise<TranslationResponse> {
+  throw new Error("Caiyun no-setup translation is reserved, but no stable public no-key endpoint is configured yet.")
+}
+
 function buildTranslationPrompt(text: string, targetLabel: string): AI.Conversation[] {
   const now = Date.now()
   return [
@@ -444,7 +493,7 @@ export async function translateWithWoxAI(api: PublicAPI, ctx: Context, request: 
   }
 }
 
-export async function translateWithOpenAICompatible(request: TranslationRequest): Promise<TranslationResponse> {
+export async function translateWithOpenAICompatible(request: TranslationRequest, providerName = "OpenAI compatible"): Promise<TranslationResponse> {
   const baseUrl = request.settings.openaiBaseUrl.replace(/\/+$/, "")
   const response = await fetchWithTimeout(
     `${baseUrl}/chat/completions`,
@@ -465,14 +514,54 @@ export async function translateWithOpenAICompatible(request: TranslationRequest)
     },
     request.settings.requestTimeoutMs
   )
-  const json = (await parseJsonResponse(response, "OpenAI-compatible")) as {
+  const json = (await parseJsonResponse(response, providerName)) as {
     choices?: Array<{ message?: { content?: string } }>
   }
-  const translatedText = requireString(json.choices?.[0]?.message?.content, "OpenAI-compatible provider returned an empty translation.")
+  const translatedText = requireString(json.choices?.[0]?.message?.content, `${providerName} provider returned an empty translation.`)
 
   return {
     translatedText,
-    providerName: "OpenAI compatible"
+    providerName
+  }
+}
+
+export async function translateWithClaude(request: TranslationRequest): Promise<TranslationResponse> {
+  const baseUrl = request.settings.openaiBaseUrl.replace(/\/+$/, "")
+  const conversations = buildTranslationPrompt(request.text, request.direction.targetLabel)
+  const response = await fetchWithTimeout(
+    `${baseUrl}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "x-api-key": request.settings.openaiApiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: request.settings.openaiModel,
+        system: conversations[0].Text,
+        messages: [{ role: "user", content: conversations[1].Text }],
+        max_tokens: 2048,
+        temperature: 0.1
+      })
+    },
+    request.settings.requestTimeoutMs
+  )
+  const json = (await parseJsonResponse(response, "Claude")) as {
+    content?: Array<{ type?: string; text?: string }>
+  }
+  const translatedText = requireString(
+    json.content
+      ?.filter(item => item.type === "text" && typeof item.text === "string")
+      .map(item => item.text)
+      .join("")
+      .trim(),
+    "Claude provider returned an empty translation."
+  )
+
+  return {
+    translatedText,
+    providerName: "Claude"
   }
 }
 
@@ -480,11 +569,26 @@ export async function translateText(api: PublicAPI, ctx: Context, provider: Tran
   if (provider === "microsoft") {
     return translateWithMicrosoft(request)
   }
+  if (provider === "youdao") {
+    return translateWithYoudao(request)
+  }
+  if (provider === "caiyun") {
+    return translateWithCaiyun()
+  }
   if (provider === "deepl") {
     return translateWithDeepL(request)
   }
   if (provider === "wox_ai") {
     return translateWithWoxAI(api, ctx, request)
+  }
+  if (provider === "claude") {
+    return translateWithClaude(request)
+  }
+  if (provider === "openai") {
+    return translateWithOpenAICompatible(request, "OpenAI")
+  }
+  if (provider === "deepseek") {
+    return translateWithOpenAICompatible(request, "DeepSeek")
   }
   return translateWithOpenAICompatible(request)
 }

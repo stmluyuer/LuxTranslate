@@ -10,7 +10,9 @@ import {
   searchHistoryEntries,
   translateWithDeepL,
   translateWithMicrosoft,
+  translateWithClaude,
   translateWithOpenAICompatible,
+  translateWithYoudao,
   upsertHistoryEntry
 } from "../translate"
 
@@ -43,11 +45,14 @@ describe("query parsing", () => {
     expect(parseTranslationQuery("ms hello", "deepl")).toMatchObject({ provider: "microsoft", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("deepl hello", "microsoft")).toMatchObject({ provider: "deepl", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("ai hello", "microsoft")).toMatchObject({ provider: "wox_ai", text: "hello", forcedProvider: true })
-    expect(parseTranslationQuery("openai hello", "microsoft")).toMatchObject({ provider: "openai_compatible", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("openai hello", "microsoft")).toMatchObject({ provider: "openai", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("claude hello", "microsoft")).toMatchObject({ provider: "claude", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("deepseek hello", "microsoft")).toMatchObject({ provider: "deepseek", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("custom hello", "microsoft")).toMatchObject({ provider: "llm_custom", text: "hello", forcedProvider: true })
   })
 
   test("parses visible provider lists", () => {
-    expect(parseProviderList("microsoft,openai_compatible,deepl,openai_compatible")).toEqual(["microsoft", "openai_compatible", "deepl"])
+    expect(parseProviderList("microsoft,openai,deepseek,openai")).toEqual(["microsoft", "openai", "deepseek"])
     expect(parseProviderList(JSON.stringify(["deepl", "wox_ai"]))).toEqual(["deepl", "wox_ai"])
     expect(parseProviderList("")).toEqual([])
   })
@@ -56,7 +61,7 @@ describe("query parsing", () => {
     const rows = [
       { provider: "microsoft" },
       { provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" },
-      { provider: "openai_compatible", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" },
+      { provider: "openai", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" },
       { provider: "unknown" }
     ]
     expect(parseProviderTableRows(JSON.stringify(rows))[1]).toMatchObject({ provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" })
@@ -80,7 +85,7 @@ describe("configuration checks", () => {
   test("reports missing provider settings", () => {
     expect(getMissingConfiguration("microsoft", DEFAULT_SETTINGS)).toBeNull()
     expect(getMissingConfiguration("deepl", DEFAULT_SETTINGS)).toContain("DeepL API key")
-    expect(getMissingConfiguration("openai_compatible", DEFAULT_SETTINGS)).toContain("OpenAI-compatible API key")
+    expect(getMissingConfiguration("openai", DEFAULT_SETTINGS)).toContain("API key")
   })
 })
 
@@ -183,6 +188,39 @@ describe("provider requests", () => {
     expect(url).toBe("https://example.com/v1/chat/completions")
     expect(headersOf(init).Authorization).toBe("Bearer token")
     expect(JSON.parse(init.body as string).model).toBe("model-a")
+    expect(result.translatedText).toBe("你好")
+  })
+
+  test("calls Claude messages endpoint", async () => {
+    const fetchMock = jest.fn(async () => jsonResponse({ content: [{ type: "text", text: "你好" }] }))
+    global.fetch = fetchMock as typeof fetch
+
+    const result = await translateWithClaude({
+      text: "hello",
+      direction: resolveLanguageDirection("hello"),
+      settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://api.anthropic.com/v1/", openaiModel: "claude-test" }
+    })
+
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toBe("https://api.anthropic.com/v1/messages")
+    expect(headersOf(init)["x-api-key"]).toBe("token")
+    expect(JSON.parse(init.body as string).model).toBe("claude-test")
+    expect(result.translatedText).toBe("你好")
+  })
+
+  test("calls Youdao no-setup endpoint", async () => {
+    const fetchMock = jest.fn(async () => jsonResponse({ fanyi: { tran: "你好" } }))
+    global.fetch = fetchMock as typeof fetch
+
+    const result = await translateWithYoudao({
+      text: "hello",
+      direction: resolveLanguageDirection("hello"),
+      settings: DEFAULT_SETTINGS
+    })
+
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toContain("dict.youdao.com/jsonapi_s")
+    expect(init.method).toBe("GET")
     expect(result.translatedText).toBe("你好")
   })
 

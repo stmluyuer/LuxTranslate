@@ -42,12 +42,14 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const historyLimit = Number.parseInt(historyLimitRaw, 10)
   const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
   const providerTableValue = await getSetting(ctx, "provider_table", "")
+  const noSetupProviderTableValue = await getSetting(ctx, "no_setup_provider_table", "")
+  const llmProviderTableValue = await getSetting(ctx, "llm_provider_table", "")
   const visibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
     visibleProviders,
-    providerRows: parseProviderTableRows(providerTableValue),
+    providerRows: [...parseProviderTableRows(providerTableValue), ...parseProviderTableRows(noSetupProviderTableValue), ...parseProviderTableRows(llmProviderTableValue)],
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as "auto" | "en" | "zh",
     defaultTargetPolicy: "auto_zh_en",
     deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",
@@ -64,33 +66,50 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
 
 function settingsForProvider(settings: PluginSettings, provider: TranslationProvider): PluginSettings {
   const row = settings.providerRows.find(item => item.provider === provider)
+  const providerDefaults: Partial<Pick<PluginSettings, "openaiBaseUrl" | "openaiModel">> = {
+    openaiBaseUrl:
+      provider === "openai" ? "https://api.openai.com/v1" : provider === "deepseek" ? "https://api.deepseek.com/v1" : provider === "claude" ? "https://api.anthropic.com/v1" : settings.openaiBaseUrl,
+    openaiModel: provider === "openai" ? "gpt-4o-mini" : provider === "deepseek" ? "deepseek-chat" : provider === "claude" ? "claude-3-5-haiku-latest" : settings.openaiModel
+  }
+
   if (!row) {
-    return settings
+    return { ...settings, ...providerDefaults }
   }
 
   return {
     ...settings,
+    ...providerDefaults,
     deeplPlan: row.deeplPlan === "pro" ? "pro" : settings.deeplPlan,
     deeplApiKey: row.apiKey?.trim() || settings.deeplApiKey,
     woxAiModel: row.aiModel?.trim() || settings.woxAiModel,
-    openaiBaseUrl: row.baseUrl?.trim() || settings.openaiBaseUrl,
+    openaiBaseUrl: row.baseUrl?.trim() || providerDefaults.openaiBaseUrl || settings.openaiBaseUrl,
     openaiApiKey: row.apiKey?.trim() || settings.openaiApiKey,
-    openaiModel: row.model?.trim() || settings.openaiModel
+    openaiModel: row.model?.trim() || providerDefaults.openaiModel || settings.openaiModel
   }
 }
 
 function providerCommand(provider: TranslationProvider): string {
   if (provider === "microsoft") return "ms"
+  if (provider === "youdao") return "youdao"
+  if (provider === "caiyun") return "caiyun"
   if (provider === "wox_ai") return "ai"
-  if (provider === "openai_compatible") return "openai"
+  if (provider === "openai") return "openai"
+  if (provider === "claude") return "claude"
+  if (provider === "deepseek") return "deepseek"
+  if (provider === "llm_custom" || provider === "openai_compatible") return "custom"
   return "deepl"
 }
 
 function providerDisplayName(provider: TranslationProvider): string {
   if (provider === "microsoft") return "Microsoft"
+  if (provider === "youdao") return "Youdao"
+  if (provider === "caiyun") return "Caiyun"
   if (provider === "deepl") return "DeepL"
   if (provider === "wox_ai") return "Wox AI"
-  return "OpenAI compatible"
+  if (provider === "openai") return "OpenAI"
+  if (provider === "claude") return "Claude"
+  if (provider === "deepseek") return "DeepSeek"
+  return "Custom LLM"
 }
 
 async function t(ctx: Context, key: string): Promise<string> {
@@ -115,9 +134,13 @@ async function buildHelpResult(ctx: Context): Promise<Result> {
         "",
         `- ${await t(ctx, "help_default_provider")}`,
         `- ${await t(ctx, "help_microsoft")}`,
-        `- ${await t(ctx, "help_deepl")}`,
-        `- ${await t(ctx, "help_wox_ai")}`,
+        `- ${await t(ctx, "help_youdao")}`,
+        `- ${await t(ctx, "help_caiyun")}`,
         `- ${await t(ctx, "help_openai")}`,
+        `- ${await t(ctx, "help_claude")}`,
+        `- ${await t(ctx, "help_deepseek")}`,
+        `- ${await t(ctx, "help_custom_llm")}`,
+        `- ${await t(ctx, "help_wox_ai")}`,
         `- ${await t(ctx, "help_history")}`,
         `- ${await t(ctx, "help_history_search")}`
       ].join("\n"),
@@ -172,7 +195,7 @@ async function buildResultActions(ctx: Context, translatedText: string, sourceTe
     }
   ]
 
-  for (const alternate of ["microsoft", "deepl", "wox_ai", "openai_compatible"] as TranslationProvider[]) {
+  for (const alternate of ["microsoft", "youdao", "openai", "claude", "deepseek", "llm_custom", "wox_ai"] as TranslationProvider[]) {
     if (alternate === provider) {
       continue
     }

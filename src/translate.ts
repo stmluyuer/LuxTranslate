@@ -65,6 +65,10 @@ export interface ParsedQuery {
   provider: TranslationProvider
   text: string
   forcedProvider: boolean
+  /** 用户通过 tr 指令指定的目标语言，覆盖设置中的目标语言 */
+  targetLanguage?: LanguageCode
+  /** 用户通过 tr 指令指定的源语言，覆盖设置中的源语言 */
+  sourceLanguage?: LanguageCode
 }
 
 export interface LanguageDirection {
@@ -172,6 +176,12 @@ function isTranslationProvider(value: string): value is TranslationProvider {
     value === "deepl" ||
     value === "openai_compatible"
   )
+}
+
+export const LANGUAGE_CODES: LanguageCode[] = ["auto", "zh", "en", "ja", "ko", "ru", "ar", "fr", "de"]
+
+export function isValidLanguageCode(value: string): value is LanguageCode {
+  return LANGUAGE_CODES.includes(value as LanguageCode)
 }
 
 export function parseProviderList(value: string): TranslationProvider[] {
@@ -291,18 +301,72 @@ export function parseTranslationQuery(search: string, defaultProvider: Translati
     return { provider: defaultProvider, text: "", forcedProvider: false }
   }
 
-  const firstSpace = trimmed.search(/\s/)
-  const command = firstSpace === -1 ? trimmed.toLowerCase() : trimmed.slice(0, firstSpace).toLowerCase()
-  const provider = PROVIDER_ALIASES[command]
-  if (!provider) {
-    return { provider: defaultProvider, text: trimmed, forcedProvider: false }
+  const words = trimmed.split(/\s+/)
+  let idx = 0
+  let provider = defaultProvider
+  let forcedProvider = false
+  let targetLanguage: LanguageCode | undefined
+  let sourceLanguage: LanguageCode | undefined
+
+  // 1. 检查第一个单词是否是翻译源别名
+  const first = words[0].toLowerCase()
+  const providerAlias = PROVIDER_ALIASES[first]
+  if (providerAlias) {
+    provider = providerAlias
+    forcedProvider = true
+    idx++
   }
 
-  return {
-    provider,
-    text: firstSpace === -1 ? "" : trimmed.slice(firstSpace + 1).trim(),
-    forcedProvider: true
+  // 2. 检查下一个单词是否是语言规格（en:zh / :zh / zh）
+  if (idx < words.length) {
+    const spec = parseLanguageSpec(words[idx].toLowerCase())
+    if (spec) {
+      targetLanguage = spec.targetLanguage
+      sourceLanguage = spec.sourceLanguage
+      idx++
+    }
   }
+
+  // 3. 剩余部分为待翻译文本
+  const text = words.slice(idx).join(" ").trim()
+
+  return { provider, text, forcedProvider, targetLanguage, sourceLanguage }
+}
+
+/** 解析语言规格指令，支持格式：zh / :zh / en:zh / auto:zh */
+export function parseLanguageSpec(word: string): { targetLanguage?: LanguageCode; sourceLanguage?: LanguageCode } | null {
+  // ":zh" — 仅目标语言（冒号开头）
+  if (word.startsWith(":") && word.length >= 3 && word.length <= 5) {
+    const lang = word.slice(1)
+    if (isValidLanguageCode(lang) && lang !== "auto") {
+      return { targetLanguage: lang as LanguageCode }
+    }
+    return null
+  }
+
+  // "en:zh" 或 "auto:zh" — 显式 source:target
+  const colonParts = word.split(":")
+  if (colonParts.length === 2) {
+    const left = colonParts[0]
+    const right = colonParts[1]
+    if (left === "auto" && isValidLanguageCode(right)) {
+      return { targetLanguage: right as LanguageCode }
+    }
+    if (isValidLanguageCode(left) && isValidLanguageCode(right)) {
+      return {
+        sourceLanguage: left === "auto" ? undefined : (left as LanguageCode),
+        targetLanguage: right === "auto" ? undefined : (right as LanguageCode)
+      }
+    }
+    return null
+  }
+
+  // "zh" — 裸语言代码（仅 2 字母，排除 "auto"）
+  if (/^[a-z]{2}$/.test(word) && isValidLanguageCode(word) && word !== "auto") {
+    return { targetLanguage: word as LanguageCode }
+  }
+
+  return null
 }
 
 type ScriptFamily = "cjk" | "kana" | "hangul" | "cyrillic" | "arabic" | "latin" | null

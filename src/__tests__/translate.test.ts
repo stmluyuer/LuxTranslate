@@ -117,7 +117,7 @@ describe("resolveLanguageDirection (8 languages)", () => {
 
 describe("query parsing", () => {
   test("uses default provider when no provider command is present", () => {
-    expect(parseTranslationQuery("hello world", "microsoft")).toEqual({
+    expect(parseTranslationQuery("hello world", "microsoft")).toMatchObject({
       provider: "microsoft",
       text: "hello world",
       forcedProvider: false
@@ -132,6 +132,83 @@ describe("query parsing", () => {
     expect(parseTranslationQuery("claude hello", "microsoft")).toMatchObject({ provider: "claude", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("deepseek hello", "microsoft")).toMatchObject({ provider: "deepseek", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("custom hello", "microsoft")).toMatchObject({ provider: "llm_custom", text: "hello", forcedProvider: true })
+  })
+
+  test("parses target language from bare code", () => {
+    expect(parseTranslationQuery("zh hello world", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello world",
+      targetLanguage: "zh",
+      forcedProvider: false
+    })
+    expect(parseTranslationQuery("en hello", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello",
+      targetLanguage: "en"
+    })
+    expect(parseTranslationQuery("ja hello", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello",
+      targetLanguage: "ja"
+    })
+  })
+
+  test("parses source:target language spec", () => {
+    expect(parseTranslationQuery("en:zh hello", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello",
+      sourceLanguage: "en",
+      targetLanguage: "zh"
+    })
+    expect(parseTranslationQuery("ja:en こんにちは", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "こんにちは",
+      sourceLanguage: "ja",
+      targetLanguage: "en"
+    })
+  })
+
+  test("parses auto:zh and :zh syntax", () => {
+    expect(parseTranslationQuery("auto:zh hello", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello",
+      targetLanguage: "zh",
+      sourceLanguage: undefined
+    })
+    expect(parseTranslationQuery(":zh hello", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello",
+      targetLanguage: "zh"
+    })
+  })
+
+  test("parses provider + target language combo", () => {
+    expect(parseTranslationQuery("ms zh hello", "deepl")).toMatchObject({
+      provider: "microsoft",
+      text: "hello",
+      targetLanguage: "zh",
+      forcedProvider: true
+    })
+    expect(parseTranslationQuery("deepl en:ja hello world", "microsoft")).toMatchObject({
+      provider: "deepl",
+      text: "hello world",
+      sourceLanguage: "en",
+      targetLanguage: "ja",
+      forcedProvider: true
+    })
+  })
+
+  test("ignores non-language words as target spec", () => {
+    expect(parseTranslationQuery("hello world", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello world",
+      targetLanguage: undefined
+    })
+    expect(parseTranslationQuery("xx hello", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "xx hello",
+      targetLanguage: undefined
+    })
   })
 
   test("parses visible provider lists", () => {

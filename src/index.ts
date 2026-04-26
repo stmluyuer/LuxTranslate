@@ -248,17 +248,27 @@ async function buildTranslationPreview(ctx: Context, translatedText: string, sou
   ].join("\n")
 }
 
-async function translateProviderResult(ctx: Context, provider: TranslationProvider, sourceText: string, settings: PluginSettings, score: number, includeProviderInTitle: boolean): Promise<Result> {
+async function translateProviderResult(
+  ctx: Context,
+  provider: TranslationProvider,
+  sourceText: string,
+  settings: PluginSettings,
+  score: number,
+  includeProviderInTitle: boolean,
+  languageOverrides?: { sourceLanguage?: LanguageCode; targetLanguage?: LanguageCode }
+): Promise<Result> {
   const providerSettings = settingsForProvider(settings, provider)
   const missingConfiguration = getMissingConfiguration(provider, providerSettings)
   if (missingConfiguration) {
     return buildConfigurationResult(missingConfiguration, provider)
   }
 
-  // 如果用户指定了固定目标语言则直接使用，否则智能模式（系统语言 + 配对语言）
-  const effectiveTarget = providerSettings.defaultTargetLanguage === "auto" ? providerSettings.systemLanguage || "en" : providerSettings.defaultTargetLanguage
+  // 用户通过 tr 指令指定的语言覆盖优先，否则走设置项
+  const effectiveSource = languageOverrides?.sourceLanguage || providerSettings.defaultSourceLanguage
+  const effectiveTarget = languageOverrides?.targetLanguage || (providerSettings.defaultTargetLanguage === "auto" ? providerSettings.systemLanguage || "en" : providerSettings.defaultTargetLanguage)
+  const pair = languageOverrides?.targetLanguage || providerSettings.pairLanguage || "en"
 
-  const direction = resolveLanguageDirection(sourceText, providerSettings.defaultSourceLanguage, effectiveTarget, providerSettings.pairLanguage || "en")
+  const direction = resolveLanguageDirection(sourceText, effectiveSource, effectiveTarget, pair)
   const history = await loadHistory(ctx)
   const historyEntry = history.find(entry => historyKeyMatches(entry, provider, sourceText, direction))
   if (historyEntry) {
@@ -391,6 +401,6 @@ export const plugin: Plugin = {
     }
 
     const providers = parsed.forcedProvider || settings.visibleProviders.length === 0 ? [parsed.provider] : settings.visibleProviders
-    return Promise.all(providers.map((provider, index) => translateProviderResult(ctx, provider, parsed.text, settings, 100 - index, providers.length > 1)))
+    return Promise.all(providers.map((provider, index) => translateProviderResult(ctx, provider, parsed.text, settings, 100 - index, providers.length > 1, parsed)))
   }
 }

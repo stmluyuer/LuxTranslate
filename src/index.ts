@@ -7,6 +7,7 @@ import {
   parseHistoryEntries,
   parseProviderList,
   parseProviderTableProviders,
+  parseProviderTableRows,
   parseTranslationQuery,
   PluginSettings,
   resolveLanguageDirection,
@@ -41,12 +42,14 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const historyLimitRaw = await getSetting(ctx, "history_limit", String(DEFAULT_SETTINGS.historyLimit))
   const historyLimit = Number.parseInt(historyLimitRaw, 10)
   const showPreviewDetails = (await getSetting(ctx, "show_preview_details", String(DEFAULT_SETTINGS.showPreviewDetails))) === "true"
-  const tableProviders = parseProviderTableProviders(await getSetting(ctx, "provider_table", ""))
+  const providerTableValue = await getSetting(ctx, "provider_table", "")
+  const tableProviders = parseProviderTableProviders(providerTableValue)
   const legacyVisibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
     visibleProviders: tableProviders.length > 0 ? tableProviders : legacyVisibleProviders,
+    providerRows: parseProviderTableRows(providerTableValue),
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as "auto" | "en" | "zh",
     defaultTargetPolicy: "auto_zh_en",
     deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",
@@ -58,6 +61,23 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
     requestTimeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_SETTINGS.requestTimeoutMs,
     showPreviewDetails,
     historyLimit: Number.isFinite(historyLimit) && historyLimit >= 0 ? historyLimit : DEFAULT_SETTINGS.historyLimit
+  }
+}
+
+function settingsForProvider(settings: PluginSettings, provider: TranslationProvider): PluginSettings {
+  const row = settings.providerRows.find(item => item.provider === provider)
+  if (!row) {
+    return settings
+  }
+
+  return {
+    ...settings,
+    deeplPlan: row.deeplPlan === "pro" ? "pro" : settings.deeplPlan,
+    deeplApiKey: row.apiKey?.trim() || settings.deeplApiKey,
+    woxAiModel: row.aiModel?.trim() || settings.woxAiModel,
+    openaiBaseUrl: row.baseUrl?.trim() || settings.openaiBaseUrl,
+    openaiApiKey: row.apiKey?.trim() || settings.openaiApiKey,
+    openaiModel: row.model?.trim() || settings.openaiModel
   }
 }
 
@@ -192,23 +212,24 @@ async function buildTranslationPreview(ctx: Context, translatedText: string, sou
 }
 
 async function translateProviderResult(ctx: Context, provider: TranslationProvider, sourceText: string, settings: PluginSettings, score: number, includeProviderInTitle: boolean): Promise<Result> {
-  const missingConfiguration = getMissingConfiguration(provider, settings)
+  const providerSettings = settingsForProvider(settings, provider)
+  const missingConfiguration = getMissingConfiguration(provider, providerSettings)
   if (missingConfiguration) {
     return buildConfigurationResult(missingConfiguration, provider)
   }
 
-  const direction = resolveLanguageDirection(sourceText, settings.defaultSourceLanguage)
+  const direction = resolveLanguageDirection(sourceText, providerSettings.defaultSourceLanguage)
   const history = await loadHistory(ctx)
   const historyEntry = history.find(entry => historyKeyMatches(entry, provider, sourceText, direction))
   if (historyEntry) {
-    return buildTranslationResult(ctx, historyEntry, sourceText, settings, score, includeProviderInTitle, true)
+    return buildTranslationResult(ctx, historyEntry, sourceText, providerSettings, score, includeProviderInTitle, true)
   }
 
   try {
     const translation = await translateText(api, ctx, provider, {
       text: sourceText,
       direction,
-      settings
+      settings: providerSettings
     })
     const entry: TranslationHistoryEntry = {
       sourceText,
@@ -220,8 +241,8 @@ async function translateProviderResult(ctx: Context, provider: TranslationProvid
       detectedSourceLanguage: translation.detectedSourceLanguage,
       timestamp: Date.now()
     }
-    await saveHistory(ctx, upsertHistoryEntry(history, entry, settings.historyLimit))
-    return buildTranslationResult(ctx, entry, sourceText, settings, score, includeProviderInTitle, false)
+    await saveHistory(ctx, upsertHistoryEntry(history, entry, providerSettings.historyLimit))
+    return buildTranslationResult(ctx, entry, sourceText, providerSettings, score, includeProviderInTitle, false)
   } catch (error) {
     await api.Log(ctx, "Error", error instanceof Error ? error.stack || error.message : String(error))
     return {

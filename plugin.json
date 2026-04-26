@@ -32,6 +32,11 @@
       "table_note_deepl": "Needs DeepL API key",
       "table_note_wox_ai": "Uses Wox AI",
       "table_note_openai": "Needs OpenAI-compatible API key",
+      "table_deepl_plan": "DeepL plan",
+      "table_api_key": "API key",
+      "table_base_url": "Base URL",
+      "table_model": "Model",
+      "table_ai_model": "Wox AI model",
       "settings_source": "Source language",
       "settings_source_tip": "Use auto detection unless a provider requires a fixed source language",
       "settings_target_policy": "Target policy",
@@ -100,6 +105,11 @@
       "table_note_deepl": "需要 DeepL API Key",
       "table_note_wox_ai": "使用 Wox AI",
       "table_note_openai": "需要 OpenAI 兼容 API Key",
+      "table_deepl_plan": "DeepL 套餐",
+      "table_api_key": "API Key",
+      "table_base_url": "Base URL",
+      "table_model": "模型",
+      "table_ai_model": "Wox AI 模型",
       "settings_source": "源语言",
       "settings_source_tip": "除非翻译服务需要固定源语言，否则建议自动检测",
       "settings_target_policy": "目标语言策略",
@@ -190,7 +200,7 @@
         "Key": "provider_table",
         "Title": "i18n:settings_provider_table",
         "Tooltip": "i18n:settings_provider_table_tip",
-        "DefaultValue": "[{\"enabled\":false,\"name\":\"Microsoft\",\"provider\":\"microsoft\",\"note\":\"No setup\"},{\"enabled\":false,\"name\":\"DeepL\",\"provider\":\"deepl\",\"note\":\"Needs API key\"},{\"enabled\":false,\"name\":\"Wox AI\",\"provider\":\"wox_ai\",\"note\":\"Uses Wox AI\"},{\"enabled\":false,\"name\":\"OpenAI compatible\",\"provider\":\"openai_compatible\",\"note\":\"Needs API key\"}]",
+        "DefaultValue": "[{\"enabled\":false,\"name\":\"Microsoft\",\"provider\":\"microsoft\",\"note\":\"No setup\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"enabled\":false,\"name\":\"DeepL\",\"provider\":\"deepl\",\"note\":\"Needs API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"enabled\":false,\"name\":\"Wox AI\",\"provider\":\"wox_ai\",\"note\":\"Uses Wox AI\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\",\"aiModel\":\"\"},{\"enabled\":false,\"name\":\"OpenAI compatible\",\"provider\":\"openai_compatible\",\"note\":\"Needs API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"https://api.openai.com/v1\",\"model\":\"gpt-4o-mini\",\"aiModel\":\"\"}]",
         "SortColumnKey": "name",
         "SortOrder": "asc",
         "MaxHeight": 260,
@@ -209,7 +219,46 @@
               { "Label": "i18n:provider_openai", "Value": "openai_compatible" }
             ]
           },
-          { "Key": "note", "Label": "i18n:table_note", "Type": "text", "Width": 240 }
+          { "Key": "note", "Label": "i18n:table_note", "Type": "text", "Width": 240 },
+          {
+            "Key": "deeplPlan",
+            "Label": "i18n:table_deepl_plan",
+            "Type": "select",
+            "Width": 140,
+            "HideInTable": true,
+            "SelectOptions": [
+              { "Label": "Free", "Value": "free" },
+              { "Label": "Pro", "Value": "pro" }
+            ]
+          },
+          {
+            "Key": "apiKey",
+            "Label": "i18n:table_api_key",
+            "Type": "text",
+            "Width": 320,
+            "HideInTable": true
+          },
+          {
+            "Key": "baseUrl",
+            "Label": "i18n:table_base_url",
+            "Type": "text",
+            "Width": 360,
+            "HideInTable": true
+          },
+          {
+            "Key": "model",
+            "Label": "i18n:table_model",
+            "Type": "text",
+            "Width": 240,
+            "HideInTable": true
+          },
+          {
+            "Key": "aiModel",
+            "Label": "i18n:table_ai_model",
+            "Type": "selectAIModel",
+            "Width": 260,
+            "HideInTable": true
+          }
         ],
         "Style": { "Width": 720 }
       }

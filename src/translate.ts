@@ -5,6 +5,7 @@ export type TranslationProvider = "microsoft" | "deepl" | "wox_ai" | "openai_com
 export interface PluginSettings {
   defaultProvider: TranslationProvider
   visibleProviders: TranslationProvider[]
+  providerRows: ProviderTableRow[]
   defaultSourceLanguage: "auto" | "en" | "zh"
   defaultTargetPolicy: "auto_zh_en"
   deeplPlan: "free" | "pro"
@@ -60,6 +61,11 @@ export interface ProviderTableRow {
   provider?: string
   name?: string
   note?: string
+  deeplPlan?: string
+  apiKey?: string
+  baseUrl?: string
+  model?: string
+  aiModel?: string
 }
 
 const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
@@ -78,6 +84,7 @@ let microsoftAuthToken = ""
 export const DEFAULT_SETTINGS: PluginSettings = {
   defaultProvider: "microsoft",
   visibleProviders: [],
+  providerRows: [],
   defaultSourceLanguage: "auto",
   defaultTargetPolicy: "auto_zh_en",
   deeplPlan: "free",
@@ -122,6 +129,13 @@ function isEnabledTableValue(value: unknown): boolean {
 }
 
 export function parseProviderTableProviders(value: string): TranslationProvider[] {
+  return parseProviderTableRows(value)
+    .filter(row => isEnabledTableValue(row.enabled) && typeof row.provider === "string" && isTranslationProvider(row.provider))
+    .map(row => row.provider as TranslationProvider)
+    .filter((provider, index, providers) => providers.indexOf(provider) === index)
+}
+
+export function parseProviderTableRows(value: string): ProviderTableRow[] {
   if (value.trim() === "") {
     return []
   }
@@ -132,15 +146,7 @@ export function parseProviderTableProviders(value: string): TranslationProvider[
       return []
     }
 
-    const providers: TranslationProvider[] = []
-    for (const row of parsed as ProviderTableRow[]) {
-      const provider = typeof row.provider === "string" ? row.provider : ""
-      if (!isEnabledTableValue(row.enabled) || !isTranslationProvider(provider) || providers.includes(provider)) {
-        continue
-      }
-      providers.push(provider)
-    }
-    return providers
+    return (parsed as ProviderTableRow[]).filter(row => typeof row === "object" && row !== null && typeof row.provider === "string" && isTranslationProvider(row.provider))
   } catch {
     return []
   }

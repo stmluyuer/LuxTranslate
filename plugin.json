@@ -14,9 +14,6 @@
       "plugin_description": "Translate text with Microsoft, DeepL, Wox AI, or OpenAI-compatible providers",
       "settings_group_basic": "Basic behavior",
       "settings_group_display": "Display and history",
-      "settings_group_deepl": "DeepL",
-      "settings_group_wox_ai": "Wox AI",
-      "settings_group_openai": "OpenAI-compatible",
       "settings_group_advanced": "Advanced",
       "settings_provider": "Default provider",
       "settings_provider_tip": "Provider used by normal queries such as tr hello",
@@ -41,13 +38,6 @@
       "settings_source_tip": "Use auto detection unless a provider requires a fixed source language",
       "settings_target_policy": "Target policy",
       "settings_target_policy_tip": "Automatically translate Chinese to English and other text to Chinese",
-      "settings_deepl_plan": "DeepL plan",
-      "settings_deepl_key": "DeepL API key",
-      "settings_wox_ai_model": "Wox AI model",
-      "settings_wox_ai_model_tip": "Reserved for Wox AI model selection; current SDK uses Wox's active AI model",
-      "settings_openai_base_url": "OpenAI-compatible base URL",
-      "settings_openai_key": "OpenAI-compatible API key",
-      "settings_openai_model": "OpenAI-compatible model",
       "settings_timeout": "Request timeout",
       "settings_history_limit": "History limit",
       "settings_history_limit_tip": "Maximum number of translation history entries to keep",
@@ -87,9 +77,6 @@
       "plugin_description": "使用 Microsoft、DeepL、Wox AI 或 OpenAI 兼容接口翻译文本",
       "settings_group_basic": "基础行为",
       "settings_group_display": "显示与历史",
-      "settings_group_deepl": "DeepL",
-      "settings_group_wox_ai": "Wox AI",
-      "settings_group_openai": "OpenAI 兼容接口",
       "settings_group_advanced": "高级设置",
       "settings_provider": "默认翻译源",
       "settings_provider_tip": "普通查询（如 tr hello）使用的翻译源",
@@ -114,13 +101,6 @@
       "settings_source_tip": "除非翻译服务需要固定源语言，否则建议自动检测",
       "settings_target_policy": "目标语言策略",
       "settings_target_policy_tip": "中文自动翻译为英文，其他文本自动翻译为中文",
-      "settings_deepl_plan": "DeepL 套餐",
-      "settings_deepl_key": "DeepL API Key",
-      "settings_wox_ai_model": "Wox AI 模型",
-      "settings_wox_ai_model_tip": "预留给 Wox AI 模型选择；当前 SDK 使用 Wox 当前 AI 模型",
-      "settings_openai_base_url": "OpenAI 兼容 Base URL",
-      "settings_openai_key": "OpenAI 兼容 API Key",
-      "settings_openai_model": "OpenAI 兼容模型",
       "settings_timeout": "请求超时",
       "settings_history_limit": "历史记录条数",
       "settings_history_limit_tip": "最多保留多少条翻译历史记录",
@@ -186,12 +166,26 @@
         "Tooltip": "i18n:settings_provider_tip",
         "DefaultValue": "microsoft",
         "Options": [
-          { "Label": "i18n:provider_microsoft", "Value": "microsoft" },
-          { "Label": "i18n:provider_deepl", "Value": "deepl" },
-          { "Label": "i18n:provider_wox_ai", "Value": "wox_ai" },
-          { "Label": "i18n:provider_openai", "Value": "openai_compatible" }
+          {
+            "Label": "i18n:provider_microsoft",
+            "Value": "microsoft"
+          },
+          {
+            "Label": "i18n:provider_deepl",
+            "Value": "deepl"
+          },
+          {
+            "Label": "i18n:provider_wox_ai",
+            "Value": "wox_ai"
+          },
+          {
+            "Label": "i18n:provider_openai",
+            "Value": "openai_compatible"
+          }
         ],
-        "Style": { "Width": 320 }
+        "Style": {
+          "Width": 320
+        }
       }
     },
     {
@@ -205,21 +199,48 @@
         "SortOrder": "asc",
         "MaxHeight": 260,
         "Columns": [
-          { "Key": "enabled", "Label": "i18n:table_enabled", "Type": "checkbox", "Width": 70 },
-          { "Key": "name", "Label": "i18n:table_name", "Type": "text", "Width": 150 },
+          {
+            "Key": "enabled",
+            "Label": "i18n:table_enabled",
+            "Type": "checkbox",
+            "Width": 70
+          },
+          {
+            "Key": "name",
+            "Label": "i18n:table_name",
+            "Type": "text",
+            "Width": 150
+          },
           {
             "Key": "provider",
             "Label": "i18n:table_provider",
             "Type": "select",
             "Width": 180,
             "SelectOptions": [
-              { "Label": "i18n:provider_microsoft", "Value": "microsoft" },
-              { "Label": "i18n:provider_deepl", "Value": "deepl" },
-              { "Label": "i18n:provider_wox_ai", "Value": "wox_ai" },
-              { "Label": "i18n:provider_openai", "Value": "openai_compatible" }
+              {
+                "Label": "i18n:provider_microsoft",
+                "Value": "microsoft"
+              },
+              {
+                "Label": "i18n:provider_deepl",
+                "Value": "deepl"
+              },
+              {
+                "Label": "i18n:provider_wox_ai",
+                "Value": "wox_ai"
+              },
+              {
+                "Label": "i18n:provider_openai",
+                "Value": "openai_compatible"
+              }
             ]
           },
-          { "Key": "note", "Label": "i18n:table_note", "Type": "text", "Width": 240 },
+          {
+            "Key": "note",
+            "Label": "i18n:table_note",
+            "Type": "text",
+            "Width": 240
+          },
           {
             "Key": "deeplPlan",
             "Label": "i18n:table_deepl_plan",
@@ -227,8 +248,14 @@
             "Width": 140,
             "HideInTable": true,
             "SelectOptions": [
-              { "Label": "Free", "Value": "free" },
-              { "Label": "Pro", "Value": "pro" }
+              {
+                "Label": "Free",
+                "Value": "free"
+              },
+              {
+                "Label": "Pro",
+                "Value": "pro"
+              }
             ]
           },
           {
@@ -260,7 +287,9 @@
             "HideInTable": true
           }
         ],
-        "Style": { "Width": 720 }
+        "Style": {
+          "Width": 720
+        }
       }
     },
     {
@@ -271,11 +300,22 @@
         "Tooltip": "i18n:settings_source_tip",
         "DefaultValue": "auto",
         "Options": [
-          { "Label": "Auto", "Value": "auto" },
-          { "Label": "English", "Value": "en" },
-          { "Label": "Chinese", "Value": "zh" }
+          {
+            "Label": "Auto",
+            "Value": "auto"
+          },
+          {
+            "Label": "English",
+            "Value": "en"
+          },
+          {
+            "Label": "Chinese",
+            "Value": "zh"
+          }
         ],
-        "Style": { "Width": 320 }
+        "Style": {
+          "Width": 320
+        }
       }
     },
     {
@@ -285,13 +325,22 @@
         "Label": "i18n:settings_target_policy",
         "Tooltip": "i18n:settings_target_policy_tip",
         "DefaultValue": "auto_zh_en",
-        "Options": [{ "Label": "i18n:target_auto", "Value": "auto_zh_en" }],
-        "Style": { "Width": 320 }
+        "Options": [
+          {
+            "Label": "i18n:target_auto",
+            "Value": "auto_zh_en"
+          }
+        ],
+        "Style": {
+          "Width": 320
+        }
       }
     },
     {
       "Type": "newline",
-      "Value": { "Style": {} }
+      "Value": {
+        "Style": {}
+      }
     },
     {
       "Type": "head",
@@ -307,7 +356,9 @@
         "Label": "i18n:settings_show_preview_details",
         "Tooltip": "i18n:settings_show_preview_details_tip",
         "DefaultValue": "true",
-        "Style": { "Width": 320 }
+        "Style": {
+          "Width": 320
+        }
       }
     },
     {
@@ -319,109 +370,25 @@
         "DefaultValue": "10",
         "Suffix": "items",
         "MaxLines": 1,
-        "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
-        "Style": { "Width": 220 }
-      }
-    },
-    {
-      "Type": "newline",
-      "Value": { "Style": {} }
-    },
-    {
-      "Type": "head",
-      "Value": {
-        "Content": "i18n:settings_group_deepl",
-        "Style": {}
-      }
-    },
-    {
-      "Type": "select",
-      "Value": {
-        "Key": "deepl_plan",
-        "Label": "i18n:settings_deepl_plan",
-        "DefaultValue": "free",
-        "Options": [
-          { "Label": "Free", "Value": "free" },
-          { "Label": "Pro", "Value": "pro" }
+        "Validators": [
+          {
+            "Type": "is_number",
+            "Value": {
+              "IsInteger": true,
+              "IsFloat": false
+            }
+          }
         ],
-        "Style": { "Width": 220 }
-      }
-    },
-    {
-      "Type": "textbox",
-      "Value": {
-        "Key": "deepl_api_key",
-        "Label": "i18n:settings_deepl_key",
-        "DefaultValue": "",
-        "MaxLines": 1,
-        "Style": { "Width": 500 }
+        "Style": {
+          "Width": 220
+        }
       }
     },
     {
       "Type": "newline",
-      "Value": { "Style": {} }
-    },
-    {
-      "Type": "head",
       "Value": {
-        "Content": "i18n:settings_group_wox_ai",
         "Style": {}
       }
-    },
-    {
-      "Type": "selectAIModel",
-      "Value": {
-        "Key": "wox_ai_model",
-        "Label": "i18n:settings_wox_ai_model",
-        "Tooltip": "i18n:settings_wox_ai_model_tip",
-        "DefaultValue": "",
-        "Style": { "Width": 500 }
-      }
-    },
-    {
-      "Type": "newline",
-      "Value": { "Style": {} }
-    },
-    {
-      "Type": "head",
-      "Value": {
-        "Content": "i18n:settings_group_openai",
-        "Style": {}
-      }
-    },
-    {
-      "Type": "textbox",
-      "Value": {
-        "Key": "openai_base_url",
-        "Label": "i18n:settings_openai_base_url",
-        "DefaultValue": "https://api.openai.com/v1",
-        "MaxLines": 1,
-        "Style": { "Width": 500 }
-      }
-    },
-    {
-      "Type": "textbox",
-      "Value": {
-        "Key": "openai_api_key",
-        "Label": "i18n:settings_openai_key",
-        "DefaultValue": "",
-        "MaxLines": 1,
-        "Style": { "Width": 500 }
-      }
-    },
-    {
-      "Type": "textbox",
-      "Value": {
-        "Key": "openai_model",
-        "Label": "i18n:settings_openai_model",
-        "DefaultValue": "gpt-4o-mini",
-        "MaxLines": 1,
-        "Style": { "Width": 320 }
-      }
-    },
-    {
-      "Type": "newline",
-      "Value": { "Style": {} }
     },
     {
       "Type": "head",
@@ -438,8 +405,18 @@
         "DefaultValue": "10000",
         "Suffix": "ms",
         "MaxLines": 1,
-        "Validators": [{ "Type": "is_number", "Value": { "IsInteger": true, "IsFloat": false } }],
-        "Style": { "Width": 220 }
+        "Validators": [
+          {
+            "Type": "is_number",
+            "Value": {
+              "IsInteger": true,
+              "IsFloat": false
+            }
+          }
+        ],
+        "Style": {
+          "Width": 220
+        }
       }
     }
   ]

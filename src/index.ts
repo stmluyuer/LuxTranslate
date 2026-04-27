@@ -137,7 +137,13 @@ async function t(ctx: Context, key: string): Promise<string> {
   }
 }
 
+function desc(text: string): string {
+  return text.replace(/^`[^`]+`\s*/, "")
+}
+
 async function buildHelpResult(ctx: Context): Promise<Result> {
+  const cmd = await t(ctx, "help_preview_command")
+  const dsc = await t(ctx, "help_preview_description")
   return {
     Title: await t(ctx, "help_title"),
     SubTitle: await t(ctx, "help_subtitle"),
@@ -148,24 +154,30 @@ async function buildHelpResult(ctx: Context): Promise<Result> {
       PreviewData: [
         `# ${await t(ctx, "plugin_name")}`,
         "",
-        `- ${await t(ctx, "help_default_provider")}`,
-        `- ${await t(ctx, "help_microsoft")}`,
-        `- ${await t(ctx, "help_youdao")}`,
-        `- ${await t(ctx, "help_caiyun")}`,
-        `- ${await t(ctx, "help_openai")}`,
-        `- ${await t(ctx, "help_claude")}`,
-        `- ${await t(ctx, "help_deepseek")}`,
-        `- ${await t(ctx, "help_custom_llm")}`,
-        `- ${await t(ctx, "help_wox_ai")}`,
-        `- ${await t(ctx, "help_history")}`,
-        `- ${await t(ctx, "help_history_search")}`,
+        `| ${cmd} | ${dsc} |`,
+        "| --- | --- |",
+        `| tr hello | ${desc(await t(ctx, "help_default_provider"))} |`,
+        `| tr ms hello | ${desc(await t(ctx, "help_microsoft"))} |`,
+        `| tr youdao hello | ${desc(await t(ctx, "help_youdao"))} |`,
+        `| tr caiyun hello | ${desc(await t(ctx, "help_caiyun"))} |`,
+        `| tr deepl hello | ${desc(await t(ctx, "help_deepl"))} |`,
+        `| tr openai hello | ${desc(await t(ctx, "help_openai"))} |`,
+        `| tr claude hello | ${desc(await t(ctx, "help_claude"))} |`,
+        `| tr deepseek hello | ${desc(await t(ctx, "help_deepseek"))} |`,
+        `| tr custom hello | ${desc(await t(ctx, "help_custom_llm"))} |`,
+        `| tr ai hello | ${desc(await t(ctx, "help_wox_ai"))} |`,
+        `| tr history | ${desc(await t(ctx, "help_history"))} |`,
+        `| tr history hello | ${desc(await t(ctx, "help_history_search"))} |`,
         "",
         `### ${await t(ctx, "preview_direction")}`,
-        `- ${await t(ctx, "help_lang_target")}`,
-        `- ${await t(ctx, "help_lang_source_target")}`,
-        `- ${await t(ctx, "help_lang_colon_target")}`,
-        `- ${await t(ctx, "help_provider_lang")}`,
-        `- ${await t(ctx, "help_provider_source_target")}`
+        "",
+        `| ${cmd} | ${dsc} |`,
+        "| --- | --- |",
+        `| tr zh hello | ${desc(await t(ctx, "help_lang_target"))} |`,
+        `| tr en:zh hello | ${desc(await t(ctx, "help_lang_source_target"))} |`,
+        `| tr :zh hello | ${desc(await t(ctx, "help_lang_colon_target"))} |`,
+        `| tr ms zh hello | ${desc(await t(ctx, "help_provider_lang"))} |`,
+        `| tr ms en:zh hello | ${desc(await t(ctx, "help_provider_source_target"))} |`
       ].join("\n"),
       PreviewProperties: {}
     }

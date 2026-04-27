@@ -494,37 +494,50 @@ function requireString(value: unknown, errorMessage: string): string {
   return value
 }
 
-export async function translateWithMicrosoft(request: TranslationRequest): Promise<TranslationResponse> {
-  if (microsoftAuthToken === "") {
-    const tokenResponse = await fetchWithTimeout(
-      "https://edge.microsoft.com/translate/auth",
-      {
-        method: "GET",
-        headers: {
-          Accept: "text/plain"
-        }
-      },
-      request.settings.requestTimeoutMs
-    )
-    microsoftAuthToken = requireString(await tokenResponse.text(), "Microsoft auth endpoint returned an empty token.")
-    if (!tokenResponse.ok) {
-      throw new Error(`Microsoft auth request failed with ${tokenResponse.status}: ${microsoftAuthToken}`)
-    }
+async function getMicrosoftAuthToken(request: TranslationRequest, forceRefresh = false): Promise<string> {
+  if (microsoftAuthToken !== "" && !forceRefresh) {
+    return microsoftAuthToken
   }
 
+  const tokenResponse = await fetchWithTimeout(
+    "https://edge.microsoft.com/translate/auth",
+    {
+      method: "GET",
+      headers: {
+        Accept: "text/plain"
+      }
+    },
+    request.settings.requestTimeoutMs
+  )
+  microsoftAuthToken = requireString(await tokenResponse.text(), "Microsoft auth endpoint returned an empty token.")
+  if (!tokenResponse.ok) {
+    throw new Error(`Microsoft auth request failed with ${tokenResponse.status}: ${microsoftAuthToken}`)
+  }
+  return microsoftAuthToken
+}
+
+async function requestMicrosoftTranslation(request: TranslationRequest, authToken: string): Promise<Response> {
   const url = `https://api-edge.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${encodeURIComponent(request.direction.microsoftTarget)}`
-  const response = await fetchWithTimeout(
+  return fetchWithTimeout(
     url,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${microsoftAuthToken}`,
+        Authorization: `Bearer ${authToken}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify([{ Text: request.text }])
     },
     request.settings.requestTimeoutMs
   )
+}
+
+export async function translateWithMicrosoft(request: TranslationRequest): Promise<TranslationResponse> {
+  let response = await requestMicrosoftTranslation(request, await getMicrosoftAuthToken(request))
+  if (response.status === 401) {
+    response = await requestMicrosoftTranslation(request, await getMicrosoftAuthToken(request, true))
+  }
+
   const json = (await parseJsonResponse(response, "Microsoft")) as Array<{
     detectedLanguage?: { language?: string }
     translations?: Array<{ text?: string }>

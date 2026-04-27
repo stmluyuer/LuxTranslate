@@ -304,6 +304,39 @@ describe("provider requests", () => {
     expect(result.detectedSourceLanguage).toBe("en")
   })
 
+  test("refreshes Microsoft auth token and retries once on unauthorized translation response", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 401001, message: "invalid token" } }, 401))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => "fresh-edge-token"
+      } as Response)
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            detectedLanguage: { language: "en" },
+            translations: [{ text: "world-translated" }]
+          }
+        ])
+      )
+    global.fetch = fetchMock as typeof fetch
+
+    const result = await translateWithMicrosoft({
+      text: "world",
+      direction: resolveLanguageDirection("world", "auto", "zh"),
+      settings: DEFAULT_SETTINGS
+    })
+
+    const [retryUrl, retryInit] = fetchMock.mock.calls[2] as [string, RequestInit]
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock.mock.calls[1][0]).toBe("https://edge.microsoft.com/translate/auth")
+    expect(retryUrl).toContain("api-edge.cognitive.microsofttranslator.com/translate")
+    expect(headersOf(retryInit).Authorization).toBe("Bearer fresh-edge-token")
+    expect(result.translatedText).toBe("world-translated")
+  })
+
   test("calls DeepL free endpoint with auth header and target language", async () => {
     const fetchMock = jest.fn(async () => jsonResponse({ translations: [{ detected_source_language: "EN", text: "你好" }] }))
     global.fetch = fetchMock as typeof fetch

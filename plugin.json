@@ -12,6 +12,7 @@
     "en_US": {
       "plugin_name": "LuxTranslate",
       "plugin_description": "Translate text in Wox with no-setup providers, large language models, and Wox AI",
+      "language_probe": "en",
       "settings_group_basic": "Basic behavior",
       "settings_group_no_setup": "No-setup translation",
       "settings_group_llm": "Large language models",
@@ -32,7 +33,7 @@
       "table_note": "Note",
       "table_note_microsoft": "No setup",
       "table_note_youdao": "No setup dictionary/translation endpoint",
-      "table_note_caiyun": "No setup public API",
+      "table_note_caiyun": "No setup web translator flow",
       "table_note_deepl": "Needs DeepL API key",
       "table_note_wox_ai": "Uses Wox AI",
       "table_note_openai": "Needs OpenAI-compatible API key",
@@ -47,9 +48,9 @@
       "settings_source": "Source language",
       "settings_source_tip": "Use auto detection unless a provider requires a fixed source language",
       "settings_target_language": "Target language",
-      "settings_target_language_tip": "Auto: smart direction based on system language and pair language. Fixed: always translate to this language.",
+      "settings_target_language_tip": "Auto: smart direction based on Wox's selected language and pair language. Fixed: always translate to this language.",
       "settings_pair_language": "Pair language",
-      "settings_pair_language_tip": "When translating system language text, use this as the target. Only effective when Target language is Auto.",
+      "settings_pair_language_tip": "When translating text in Wox's selected language, use this as the target. Auto chooses English for Chinese UI and Chinese for other UI languages. Only effective when Target language is Auto.",
       "settings_timeout": "Request timeout",
       "settings_history_limit": "History limit",
       "settings_history_limit_tip": "Maximum number of translation history entries to keep",
@@ -92,7 +93,7 @@
       "history_no_match": "No history matched",
       "provider_microsoft": "Microsoft (no setup)",
       "provider_youdao": "Youdao (no setup)",
-      "provider_caiyun": "Caiyun (reserved)",
+      "provider_caiyun": "Caiyun (no setup)",
       "provider_deepl": "DeepL",
       "provider_wox_ai": "Wox AI",
       "provider_openai": "OpenAI",
@@ -112,6 +113,7 @@
     "zh_CN": {
       "plugin_name": "LuxTranslate",
       "plugin_description": "在 Wox 中使用免配置翻译源、大模型和 Wox AI 翻译文本",
+      "language_probe": "zh",
       "settings_group_basic": "基础行为",
       "settings_group_no_setup": "免配置翻译",
       "settings_group_llm": "大模型翻译",
@@ -132,7 +134,7 @@
       "table_note": "备注",
       "table_note_microsoft": "免配置",
       "table_note_youdao": "免配置词典/翻译接口",
-      "table_note_caiyun": "免配置公共 API",
+      "table_note_caiyun": "免配置网页翻译流程",
       "table_note_deepl": "需要 DeepL API Key",
       "table_note_wox_ai": "使用 Wox AI",
       "table_note_openai": "需要 OpenAI 兼容 API Key",
@@ -147,9 +149,9 @@
       "settings_source": "源语言",
       "settings_source_tip": "除非翻译服务需要固定源语言，否则建议自动检测",
       "settings_target_language": "目标语言",
-      "settings_target_language_tip": "自动：根据系统语言和配对语言智能判断方向。固定：始终翻译为此语言。",
+      "settings_target_language_tip": "自动：根据 Wox 选择的界面语言和配对语言智能判断方向。固定：始终翻译为此语言。",
       "settings_pair_language": "配对语言",
-      "settings_pair_language_tip": "当原文为系统语言时，翻译为此语言。仅在目标语言为自动时生效。",
+      "settings_pair_language_tip": "当原文为 Wox 选择的界面语言时，翻译为此语言。自动会在中文界面下选择英文，在其他界面下选择中文。仅在目标语言为自动时生效。",
       "settings_timeout": "请求超时",
       "settings_history_limit": "历史记录条数",
       "settings_history_limit_tip": "最多保留多少条翻译历史记录",
@@ -192,7 +194,7 @@
       "history_no_match": "没有匹配的历史记录",
       "provider_microsoft": "Microsoft（免配置）",
       "provider_youdao": "有道（免配置）",
-      "provider_caiyun": "彩云（预留）",
+      "provider_caiyun": "彩云（免配置）",
       "provider_deepl": "DeepL",
       "provider_wox_ai": "Wox AI",
       "provider_openai": "OpenAI",
@@ -216,6 +218,9 @@
   "Features": [
     {
       "Name": "ai"
+    },
+    {
+      "Name": "querySelection"
     },
     {
       "Name": "debounce",
@@ -251,6 +256,10 @@
           {
             "Label": "i18n:provider_caiyun",
             "Value": "caiyun"
+          },
+          {
+            "Label": "i18n:provider_deepl",
+            "Value": "deepl"
           },
           {
             "Label": "i18n:provider_openai",
@@ -298,6 +307,10 @@
           {
             "Label": "i18n:provider_caiyun",
             "Value": "caiyun"
+          },
+          {
+            "Label": "i18n:provider_deepl",
+            "Value": "deepl"
           },
           {
             "Label": "i18n:provider_openai",
@@ -431,8 +444,12 @@
         "Key": "pair_language",
         "Label": "i18n:settings_pair_language",
         "Tooltip": "i18n:settings_pair_language_tip",
-        "DefaultValue": "en",
+        "DefaultValue": "auto",
         "Options": [
+          {
+            "Label": "i18n:lang_auto",
+            "Value": "auto"
+          },
           {
             "Label": "i18n:lang_zh",
             "Value": "zh"
@@ -490,7 +507,7 @@
         "Key": "no_setup_provider_table",
         "Title": "i18n:settings_no_setup_provider_table",
         "Tooltip": "i18n:settings_no_setup_provider_table_tip",
-        "DefaultValue": "[{\"name\":\"Microsoft\",\"provider\":\"microsoft\",\"note\":\"No setup\"},{\"name\":\"Youdao\",\"provider\":\"youdao\",\"note\":\"No setup dictionary/translation endpoint\"},{\"name\":\"Caiyun\",\"provider\":\"caiyun\",\"note\":\"No setup public API\"}]",
+        "DefaultValue": "[{\"name\":\"Microsoft\",\"provider\":\"microsoft\",\"note\":\"No setup\"},{\"name\":\"Youdao\",\"provider\":\"youdao\",\"note\":\"No setup dictionary/translation endpoint\"},{\"name\":\"Caiyun\",\"provider\":\"caiyun\",\"note\":\"No setup web translator flow\"}]",
         "SortColumnKey": "name",
         "SortOrder": "asc",
         "MaxHeight": 260,
@@ -552,7 +569,7 @@
         "Key": "llm_provider_table",
         "Title": "i18n:settings_llm_provider_table",
         "Tooltip": "i18n:settings_llm_provider_table_tip",
-        "DefaultValue": "[{\"name\":\"OpenAI\",\"provider\":\"openai\",\"note\":\"Needs OpenAI API key\",\"apiKey\":\"\",\"baseUrl\":\"https://api.openai.com/v1\",\"model\":\"gpt-4o-mini\"},{\"name\":\"Claude\",\"provider\":\"claude\",\"note\":\"Needs Anthropic API key\",\"apiKey\":\"\",\"baseUrl\":\"https://api.anthropic.com/v1\",\"model\":\"claude-3-5-haiku-latest\"},{\"name\":\"DeepSeek\",\"provider\":\"deepseek\",\"note\":\"Needs DeepSeek API key\",\"apiKey\":\"\",\"baseUrl\":\"https://api.deepseek.com/v1\",\"model\":\"deepseek-chat\"},{\"name\":\"Custom LLM\",\"provider\":\"llm_custom\",\"note\":\"Custom OpenAI-compatible endpoint\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\"}]",
+        "DefaultValue": "[{\"name\":\"DeepL\",\"provider\":\"deepl\",\"note\":\"Needs DeepL API key\",\"deeplPlan\":\"free\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\"},{\"name\":\"OpenAI\",\"provider\":\"openai\",\"note\":\"Needs OpenAI API key\",\"apiKey\":\"\",\"baseUrl\":\"https://api.openai.com/v1\",\"model\":\"gpt-4o-mini\"},{\"name\":\"Claude\",\"provider\":\"claude\",\"note\":\"Needs Anthropic API key\",\"apiKey\":\"\",\"baseUrl\":\"https://api.anthropic.com/v1\",\"model\":\"claude-3-5-haiku-latest\"},{\"name\":\"DeepSeek\",\"provider\":\"deepseek\",\"note\":\"Needs DeepSeek API key\",\"apiKey\":\"\",\"baseUrl\":\"https://api.deepseek.com/v1\",\"model\":\"deepseek-chat\"},{\"name\":\"Custom LLM\",\"provider\":\"llm_custom\",\"note\":\"Custom OpenAI-compatible endpoint\",\"apiKey\":\"\",\"baseUrl\":\"\",\"model\":\"\"}]",
         "SortColumnKey": "name",
         "SortOrder": "asc",
         "MaxHeight": 260,
@@ -582,6 +599,10 @@
                 "Value": "deepseek"
               },
               {
+                "Label": "i18n:provider_deepl",
+                "Value": "deepl"
+              },
+              {
                 "Label": "i18n:provider_custom_llm",
                 "Value": "llm_custom"
               }
@@ -592,6 +613,23 @@
             "Label": "i18n:table_note",
             "Type": "text",
             "Width": 240
+          },
+          {
+            "Key": "deeplPlan",
+            "Label": "i18n:table_deepl_plan",
+            "Type": "select",
+            "Width": 160,
+            "HideInTable": true,
+            "SelectOptions": [
+              {
+                "Label": "Free",
+                "Value": "free"
+              },
+              {
+                "Label": "Pro",
+                "Value": "pro"
+              }
+            ]
           },
           {
             "Key": "apiKey",

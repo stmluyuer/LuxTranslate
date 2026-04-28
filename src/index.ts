@@ -1,7 +1,6 @@
 import { ActionContext, Context, Plugin, PluginInitParams, PublicAPI, Query, Result, WoxImage } from "@wox-launcher/wox-plugin"
 import {
   DEFAULT_SETTINGS,
-  detectLanguage,
   getMissingConfiguration,
   historyKeyMatches,
   normalizeProvider,
@@ -20,7 +19,7 @@ import {
 } from "./translate"
 
 let api: PublicAPI
-let systemLanguage: LanguageCode = "en"
+let woxLanguage: LanguageCode = "en"
 
 const HISTORY_SETTING_KEY = "translation_history"
 
@@ -49,7 +48,7 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
   const visibleProviders = parseProviderList(await getSetting(ctx, "visible_providers", DEFAULT_SETTINGS.visibleProviders.join(",")))
 
   const targetLanguageRaw = await getSetting(ctx, "default_target_language", DEFAULT_SETTINGS.defaultTargetLanguage || "auto")
-  const pairLanguageRaw = await getSetting(ctx, "pair_language", DEFAULT_SETTINGS.pairLanguage || "en")
+  const pairLanguageRaw = await getSetting(ctx, "pair_language", DEFAULT_SETTINGS.pairLanguage || "auto")
 
   return {
     defaultProvider: normalizeProvider(await getSetting(ctx, "default_provider", DEFAULT_SETTINGS.defaultProvider)),
@@ -58,7 +57,7 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
     defaultSourceLanguage: (await getSetting(ctx, "default_source_language", DEFAULT_SETTINGS.defaultSourceLanguage)) as LanguageCode,
     defaultTargetLanguage: normalizeLanguageCode(targetLanguageRaw) as LanguageCode,
     pairLanguage: normalizeLanguageCode(pairLanguageRaw) as LanguageCode,
-    systemLanguage,
+    woxLanguage,
     deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",
     deeplApiKey: await getSetting(ctx, "deepl_api_key", DEFAULT_SETTINGS.deeplApiKey),
     woxAiModel: await getSetting(ctx, "wox_ai_model", DEFAULT_SETTINGS.woxAiModel),
@@ -102,6 +101,18 @@ function normalizeLanguageCode(value: string): LanguageCode {
     return value as LanguageCode
   }
   return "auto"
+}
+
+function normalizeWoxLanguageProbe(value: string): LanguageCode {
+  const normalized = value.trim().toLowerCase().replace("-", "_")
+  if (normalized.startsWith("zh")) return "zh"
+  if (normalized.startsWith("ja")) return "ja"
+  if (normalized.startsWith("ko")) return "ko"
+  if (normalized.startsWith("ru")) return "ru"
+  if (normalized.startsWith("ar")) return "ar"
+  if (normalized.startsWith("fr")) return "fr"
+  if (normalized.startsWith("de")) return "de"
+  return "en"
 }
 
 function providerCommand(provider: TranslationProvider): string {
@@ -230,7 +241,7 @@ async function buildResultActions(ctx: Context, translatedText: string, sourceTe
     }
   ]
 
-  for (const alternate of ["microsoft", "youdao", "openai", "claude", "deepseek", "llm_custom", "wox_ai"] as TranslationProvider[]) {
+  for (const alternate of ["microsoft", "youdao", "caiyun", "deepl", "openai", "claude", "deepseek", "llm_custom", "wox_ai"] as TranslationProvider[]) {
     if (alternate === provider) {
       continue
     }
@@ -284,8 +295,8 @@ async function translateProviderResult(
 
   // 用户通过 tr 指令指定的语言覆盖优先，否则走设置项
   const effectiveSource = languageOverrides?.sourceLanguage || providerSettings.defaultSourceLanguage
-  const effectiveTarget = languageOverrides?.targetLanguage || (providerSettings.defaultTargetLanguage === "auto" ? providerSettings.systemLanguage || "en" : providerSettings.defaultTargetLanguage)
-  const pair = languageOverrides?.targetLanguage || providerSettings.pairLanguage || "en"
+  const effectiveTarget = languageOverrides?.targetLanguage || (providerSettings.defaultTargetLanguage === "auto" ? providerSettings.woxLanguage || "en" : providerSettings.defaultTargetLanguage)
+  const pair = languageOverrides?.targetLanguage || providerSettings.pairLanguage || "auto"
 
   const direction = resolveLanguageDirection(sourceText, effectiveSource, effectiveTarget, pair)
   const history = await loadHistory(ctx)
@@ -393,17 +404,13 @@ function parseHistoryQuery(search: string): string | null {
 export const plugin: Plugin = {
   init: async (ctx: Context, initParams: PluginInitParams) => {
     api = initParams.API
-    // 探针检测 Wox 系统语言
+    // Detect Wox's selected UI language through plugin i18n.
     try {
-      const name = await api.GetTranslation(ctx, "plugin_name")
-      const detectedSystem = detectLanguage(name)
-      if (detectedSystem !== "en") {
-        systemLanguage = detectedSystem
-      }
+      woxLanguage = normalizeWoxLanguageProbe(await api.GetTranslation(ctx, "language_probe"))
     } catch {
-      systemLanguage = "en"
+      woxLanguage = "en"
     }
-    await api.Log(ctx, "Info", `LuxTranslate initialized, system language: ${systemLanguage}`)
+    await api.Log(ctx, "Info", `LuxTranslate initialized, Wox language: ${woxLanguage}`)
   },
 
   query: async (ctx: Context, query: Query): Promise<Result[]> => {

@@ -34,6 +34,20 @@ function headersOf(init: RequestInit): Record<string, string> {
   return init.headers as Record<string, string>
 }
 
+function caiyunEncrypt(plainText: string): string {
+  const normalKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=.+-_/"
+  const cipherKey = "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm0123456789=.+-_/"
+  const map: Record<string, string> = {}
+  for (let i = 0; i < normalKey.length; i++) {
+    map[normalKey[i]] = cipherKey[i]
+  }
+  return Buffer.from(plainText, "utf8")
+    .toString("base64")
+    .split("")
+    .map(char => map[char] ?? char)
+    .join("")
+}
+
 describe("language detection (8 languages)", () => {
   test("detects Chinese via CJK", () => {
     expect(detectLanguage("你好世界")).toBe("zh")
@@ -83,14 +97,14 @@ describe("language detection (8 languages)", () => {
 })
 
 describe("resolveLanguageDirection (8 languages)", () => {
-  test("translates non-system language to system language", () => {
+  test("translates non-Wox language to Wox language", () => {
     const dir = resolveLanguageDirection("привет мир", "auto", "zh")
     expect(dir.sourceLanguage).toBe("auto")
     expect(dir.targetLanguage).toBe("zh")
     expect(dir.targetLabel).toBe("Chinese")
   })
 
-  test("translates system language to English", () => {
+  test("translates Wox language to paired language", () => {
     const dir = resolveLanguageDirection("你好世界", "auto", "zh")
     expect(dir.sourceLanguage).toBe("auto")
     expect(dir.targetLanguage).toBe("en")
@@ -272,21 +286,14 @@ describe("provider requests", () => {
   })
 
   test("calls Microsoft no-setup endpoint and parses response", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => "edge-token"
-      } as Response)
-      .mockResolvedValueOnce(
-        jsonResponse([
-          {
-            detectedLanguage: { language: "en" },
-            translations: [{ text: "你好" }]
-          }
-        ])
-      )
+    const fetchMock = jest.fn(async () =>
+      jsonResponse([
+        {
+          detectedLanguage: { language: "en" },
+          translations: [{ text: "你好" }]
+        }
+      ])
+    )
     global.fetch = fetchMock as typeof fetch
 
     const result = await translateWithMicrosoft({
@@ -295,45 +302,34 @@ describe("provider requests", () => {
       settings: DEFAULT_SETTINGS
     })
 
-    expect(fetchMock.mock.calls[0][0]).toBe("https://edge.microsoft.com/translate/auth")
-    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
-    expect(url).toContain("api-edge.cognitive.microsofttranslator.com/translate")
-    expect(headersOf(init).Authorization).toBe("Bearer edge-token")
+    const [url, init] = firstFetchCall(fetchMock)
+    expect(url).toContain("api.cognitive.microsofttranslator.com/translate")
+    expect(headersOf(init)["X-MT-Signature"]).toContain("MSTranslatorAndroidApp::")
+    expect(headersOf(init).Authorization).toBeUndefined()
     expect(init.body).toBe(JSON.stringify([{ Text: "hello" }]))
     expect(result.translatedText).toBe("你好")
     expect(result.detectedSourceLanguage).toBe("en")
   })
 
-  test("refreshes Microsoft auth token and retries once on unauthorized translation response", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { code: 401001, message: "invalid token" } }, 401))
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => "fresh-edge-token"
-      } as Response)
-      .mockResolvedValueOnce(
-        jsonResponse([
-          {
-            detectedLanguage: { language: "en" },
-            translations: [{ text: "world-translated" }]
-          }
-        ])
-      )
+  test("passes explicit source language to Microsoft endpoint", async () => {
+    const fetchMock = jest.fn(async () =>
+      jsonResponse([
+        {
+          translations: [{ text: "world-translated" }]
+        }
+      ])
+    )
     global.fetch = fetchMock as typeof fetch
 
     const result = await translateWithMicrosoft({
       text: "world",
-      direction: resolveLanguageDirection("world", "auto", "zh"),
+      direction: resolveLanguageDirection("world", "en", "zh"),
       settings: DEFAULT_SETTINGS
     })
 
-    const [retryUrl, retryInit] = fetchMock.mock.calls[2] as [string, RequestInit]
-    expect(fetchMock).toHaveBeenCalledTimes(3)
-    expect(fetchMock.mock.calls[1][0]).toBe("https://edge.microsoft.com/translate/auth")
-    expect(retryUrl).toContain("api-edge.cognitive.microsofttranslator.com/translate")
-    expect(headersOf(retryInit).Authorization).toBe("Bearer fresh-edge-token")
+    const [url] = firstFetchCall(fetchMock)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(url).toContain("from=en")
     expect(result.translatedText).toBe("world-translated")
   })
 
@@ -389,7 +385,7 @@ describe("provider requests", () => {
   })
 
   test("calls Youdao no-setup endpoint", async () => {
-    const fetchMock = jest.fn(async () => jsonResponse({ fanyi: { tran: "你好" } }))
+    const fetchMock = jest.fn(async () => jsonResponse({ translateResult: [[{ tgt: "你好" }]] }))
     global.fetch = fetchMock as typeof fetch
 
     const result = await translateWithYoudao({
@@ -399,13 +395,19 @@ describe("provider requests", () => {
     })
 
     const [url, init] = firstFetchCall(fetchMock)
-    expect(url).toContain("dict.youdao.com/jsonapi_s")
-    expect(init.method).toBe("GET")
+    expect(url).toContain("dict.youdao.com/dicttranslate")
+    expect(init.method).toBe("POST")
+    expect(init.body).toBe("i=hello")
     expect(result.translatedText).toBe("你好")
   })
 
   test("calls Caiyun no-setup translator endpoint", async () => {
-    const fetchMock = jest.fn(async () => jsonResponse({ target: ["你好"], rc: 0 }))
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, 204))
+      .mockResolvedValueOnce(jsonResponse({ jwt: "jwt-token" }))
+      .mockResolvedValueOnce(jsonResponse({}, 204))
+      .mockResolvedValueOnce(jsonResponse({ target: caiyunEncrypt("你好"), rc: 0 }))
     global.fetch = fetchMock as typeof fetch
 
     const direction = resolveLanguageDirection("hello", "auto", "zh")
@@ -415,11 +417,12 @@ describe("provider requests", () => {
       settings: DEFAULT_SETTINGS
     })
 
-    const [url, init] = firstFetchCall(fetchMock)
+    const [url, init] = fetchMock.mock.calls[3] as [string, RequestInit]
     expect(url).toBe("https://api.interpreter.caiyunai.com/v1/translator")
-    expect(headersOf(init)["X-Authorization"]).toContain("token ")
+    expect(headersOf(init)["X-Authorization"]).toContain("token:")
+    expect(headersOf(init)["T-Authorization"]).toBe("jwt-token")
     const body = JSON.parse(init.body as string)
-    expect(body.source).toEqual(["hello"])
+    expect(body.source).toBe("hello")
     expect(body.trans_type).toBe("auto2zh")
     expect(body.detect).toBe(true)
     expect(result.translatedText).toBe("你好")

@@ -126,24 +126,26 @@ LuxTranslate groups providers into three categories:
 
 Notes:
 
-- Microsoft uses a no-manual-setup endpoint, but it is not a stable official public API and may stop working.
-- Youdao uses a public dictionary/translation endpoint for lightweight lookups.
-- Caiyun uses a public API endpoint with a built-in test token for lightweight lookups. Apply for your own API token for reliable long-term use.
+- Microsoft uses the same no-setup signed translator endpoint pattern used by LunaTranslator. It is not an official Azure Translator API contract and may change.
+- Youdao uses the signed desktop dictionary translation endpoint for lightweight lookups.
+- Caiyun uses the web translator JWT flow used by LunaTranslator for lightweight lookups.
 - OpenAI, DeepSeek, and custom LLM providers use the OpenAI-compatible chat completions format.
 - Claude uses the Anthropic Messages API format.
+- DeepL uses the official DeepL API and requires a user API key.
 
 ## Installation
 
-The first release target is GitHub source distribution. Wox Store packaging can be prepared later.
+The repository is prepared for Wox Store packaging. Publish a GitHub release with the generated `.wox` asset before submitting the store entry.
 
 ```bash
 git clone https://github.com/stmluyuer/LuxTranslate.git
 cd LuxTranslate
 pnpm install
 pnpm build
+make package
 ```
 
-The build output is written to `dist/` and can be installed or packaged following the Wox plugin workflow.
+The build output is written to `dist/`. `make package` creates `wox.plugin.luxtranslate.wox` for GitHub Releases and Wox Store download URLs.
 
 ## Usage
 
@@ -154,6 +156,7 @@ The build output is written to `dist/` and can be installed or packaged followin
 | `tr ms hello`       | Force Microsoft                    |
 | `tr youdao hello`   | Force Youdao                       |
 | `tr caiyun hello`   | Force Caiyun                       |
+| `tr deepl hello`    | Force DeepL                        |
 | `tr openai hello`   | Force OpenAI                       |
 | `tr claude hello`   | Force Claude                       |
 | `tr deepseek hello` | Force DeepSeek                     |
@@ -167,7 +170,7 @@ The build output is written to `dist/` and can be installed or packaged followin
 - `Default provider`: provider used by normal `tr <text>` queries.
 - `Visible providers`: choose multiple providers to display several results at once.
 - `No-setup providers`: manage Microsoft, Youdao, and Caiyun-style providers.
-- `Large language model providers`: configure API keys, base URLs, and model names for OpenAI, Claude, DeepSeek, or custom endpoints.
+- `Large language model providers`: configure DeepL API keys and OpenAI-compatible API keys, base URLs, and model names for OpenAI, Claude, DeepSeek, or custom endpoints.
 - `Wox AI`: uses the AI model configured in Wox.
 - `History limit`: keeps 10 entries by default.
 - `Show source and provider details`: controls whether previews include source text, provider, and direction details.
@@ -188,7 +191,7 @@ Useful scripts:
 
 ## Screenshots
 
-Screenshots are not included yet. Recommended additions:
+Screenshots are expected under `screenshots/` before Wox Store submission. Recommended additions:
 
 - Wox query result.
 - Provider settings page.

@@ -1,3 +1,4 @@
+import { createHash, createHmac, randomUUID } from "node:crypto"
 import { AI, Context, PublicAPI } from "@wox-launcher/wox-plugin"
 
 export type TranslationProvider = "microsoft" | "youdao" | "caiyun" | "openai" | "claude" | "deepseek" | "llm_custom" | "wox_ai" | "deepl" | "openai_compatible"
@@ -46,10 +47,10 @@ export interface PluginSettings {
   providerRows: ProviderTableRow[]
   defaultSourceLanguage: LanguageCode
   defaultTargetLanguage: LanguageCode
-  /** 配对语言：当源 = 系统语言时翻译成此语言，默认英语 */
+  /** 配对语言：当源语言等于 Wox 界面语言时翻译成此语言 */
   pairLanguage: LanguageCode
-  /** 系统语言（由插件 init 时探针检测，不需要持久化） */
-  systemLanguage?: LanguageCode
+  /** Wox 界面语言（由插件 init 时通过 i18n 探针检测，不需要持久化） */
+  woxLanguage?: LanguageCode
   deeplPlan: "free" | "pro"
   deeplApiKey: string
   woxAiModel: string
@@ -134,9 +135,12 @@ const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   openai_compatible: "llm_custom"
 }
 
-const CAIYUN_DEFAULT_TOKEN = "3975l6lr5pcbvidl6jl2"
-
-let microsoftAuthToken = ""
+const MICROSOFT_TRANSLATOR_PRIVATE_KEY = Buffer.from([
+  0xa2, 0x29, 0x3a, 0x3d, 0xd0, 0xdd, 0x32, 0x73, 0x97, 0x7a, 0x64, 0xdb, 0xc2, 0xf3, 0x27, 0xf5, 0xd7, 0xbf, 0x87, 0xd9, 0x45, 0x9d, 0xf0, 0x5a, 0x09, 0x66, 0xc6, 0x30, 0xc6, 0x6a, 0xaa, 0x84, 0x9a,
+  0x41, 0xaa, 0x94, 0x3a, 0xa8, 0xd5, 0x1a, 0x6e, 0x4d, 0xaa, 0xc9, 0xa3, 0x70, 0x12, 0x35, 0xc7, 0xeb, 0x12, 0xf6, 0xe8, 0x23, 0x07, 0x9e, 0x47, 0x10, 0x95, 0x91, 0x88, 0x55, 0xd8, 0x17
+])
+const CAIYUN_DEFAULT_TOKEN = "token:qgemv4jr1y38jyq6vhvi"
+const CAIYUN_BROWSER_ID = "beba19f9d7f10c74c98334c9e8afcd34"
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   defaultProvider: "microsoft",
@@ -144,7 +148,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   providerRows: [],
   defaultSourceLanguage: "auto",
   defaultTargetLanguage: "auto",
-  pairLanguage: "en",
+  pairLanguage: "auto",
   deeplPlan: "free",
   deeplApiKey: "",
   woxAiModel: "",
@@ -434,12 +438,19 @@ export function detectLanguage(text: string): LanguageCode {
   return "en"
 }
 
-export function resolveLanguageDirection(text: string, sourceLanguage: LanguageCode = "auto", systemLanguage: LanguageCode = "en", pairLanguage: LanguageCode = "en"): LanguageDirection {
+function resolvePairLanguage(woxLanguage: LanguageCode, pairLanguage: LanguageCode): LanguageCode {
+  if (pairLanguage !== "auto") {
+    return pairLanguage
+  }
+  return woxLanguage === "zh" ? "en" : "zh"
+}
+
+export function resolveLanguageDirection(text: string, sourceLanguage: LanguageCode = "auto", woxLanguage: LanguageCode = "en", pairLanguage: LanguageCode = "auto"): LanguageDirection {
   const detected = detectLanguage(text)
   const source = sourceLanguage === "auto" ? detected : sourceLanguage
 
-  // 智能目标：源 != 系统语言 → 系统语言（看懂外语）；源 == 系统语言 → 配对语言（互译）
-  const target = source === systemLanguage ? pairLanguage : systemLanguage
+  // 智能目标：源 != Wox 界面语言 -> Wox 界面语言；源 == Wox 界面语言 -> 配对语言。
+  const target = source === woxLanguage ? resolvePairLanguage(woxLanguage, pairLanguage) : woxLanguage
 
   return {
     sourceLanguage: sourceLanguage === "auto" ? "auto" : source,
@@ -494,37 +505,32 @@ function requireString(value: unknown, errorMessage: string): string {
   return value
 }
 
-async function getMicrosoftAuthToken(request: TranslationRequest, forceRefresh = false): Promise<string> {
-  if (microsoftAuthToken !== "" && !forceRefresh) {
-    return microsoftAuthToken
-  }
-
-  const tokenResponse = await fetchWithTimeout(
-    "https://edge.microsoft.com/translate/auth",
-    {
-      method: "GET",
-      headers: {
-        Accept: "text/plain"
-      }
-    },
-    request.settings.requestTimeoutMs
-  )
-  microsoftAuthToken = requireString(await tokenResponse.text(), "Microsoft auth endpoint returned an empty token.")
-  if (!tokenResponse.ok) {
-    throw new Error(`Microsoft auth request failed with ${tokenResponse.status}: ${microsoftAuthToken}`)
-  }
-  return microsoftAuthToken
+function strictUriEncode(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
 }
 
-async function requestMicrosoftTranslation(request: TranslationRequest, authToken: string): Promise<Response> {
-  const url = `https://api-edge.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${encodeURIComponent(request.direction.microsoftTarget)}`
+function microsoftSignature(url: string): string {
+  const guid = randomUUID().replace(/-/g, "")
+  const escapedUrl = strictUriEncode(url)
+  const dateTime = new Date().toUTCString()
+  const bytes = `MSTranslatorAndroidApp${escapedUrl}${dateTime}${guid}`.toLowerCase()
+  const signature = createHmac("sha256", MICROSOFT_TRANSLATOR_PRIVATE_KEY).update(bytes, "utf8").digest("base64")
+  return `MSTranslatorAndroidApp::${signature}::${dateTime}::${guid}`
+}
+
+async function requestMicrosoftTranslation(request: TranslationRequest): Promise<Response> {
+  let url = `api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${encodeURIComponent(request.direction.microsoftTarget)}`
+  if (request.direction.sourceLanguage !== "auto") {
+    url += `&from=${encodeURIComponent(LANGUAGE_MICROSOFT[request.direction.sourceLanguage] || request.direction.sourceLanguage)}`
+  }
+
   return fetchWithTimeout(
-    url,
+    `https://${url}`,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${authToken}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-MT-Signature": microsoftSignature(url)
       },
       body: JSON.stringify([{ Text: request.text }])
     },
@@ -533,11 +539,7 @@ async function requestMicrosoftTranslation(request: TranslationRequest, authToke
 }
 
 export async function translateWithMicrosoft(request: TranslationRequest): Promise<TranslationResponse> {
-  let response = await requestMicrosoftTranslation(request, await getMicrosoftAuthToken(request))
-  if (response.status === 401) {
-    response = await requestMicrosoftTranslation(request, await getMicrosoftAuthToken(request, true))
-  }
-
+  const response = await requestMicrosoftTranslation(request)
   const json = (await parseJsonResponse(response, "Microsoft")) as Array<{
     detectedLanguage?: { language?: string }
     translations?: Array<{ text?: string }>
@@ -586,22 +588,65 @@ export async function translateWithDeepL(request: TranslationRequest): Promise<T
 }
 
 export async function translateWithYoudao(request: TranslationRequest): Promise<TranslationResponse> {
+  const mysticTime = String(Date.now())
+  const client = "deskdict"
+  const product = "deskdict"
+  const sign = createHash("md5").update(`client=${client}&mysticTime=${mysticTime}&product=${product}&key=cybibtzhdwayqjmrncst`, "utf8").digest("hex")
+  const from = request.direction.sourceLanguage === "auto" ? "auto" : request.direction.sourceLanguage === "zh" ? "zh-CHS" : request.direction.sourceLanguage
+  const to = request.direction.targetLanguage === "zh" ? "zh-CHS" : request.direction.targetLanguage
+  const body = new URLSearchParams({ i: request.text })
+  const params = new URLSearchParams({
+    keyfrom: "deskdict.main",
+    client,
+    from,
+    to,
+    keyid: "deskdict",
+    mysticTime,
+    pointParam: "client,product,mysticTime",
+    sign,
+    domain: "0",
+    useTerm: "false",
+    noCheckPrivate: "false",
+    recTerms: "[]",
+    id: "0a464aedddbc6e4b9",
+    vendor: "fanyiweb_navigation",
+    in: "YoudaoDict_fanyiweb_navigation",
+    appVer: "11.2.0.0",
+    appZengqiang: "0",
+    abTest: "0",
+    model: "LENOVO",
+    screen: "1920*1080",
+    OsVersion: "10.0.19045",
+    network: "none",
+    mid: "windows10.0.19045",
+    appVersion: "11.2.0.0",
+    product,
+    source: "mine_transtab_realtime"
+  })
   const response = await fetchWithTimeout(
-    `https://dict.youdao.com/jsonapi_s?doctype=json&jsonversion=4&q=${encodeURIComponent(request.text)}`,
+    `https://dict.youdao.com/dicttranslate?${params.toString()}`,
     {
-      method: "GET",
+      method: "POST",
       headers: {
-        Accept: "application/json"
-      }
+        Accept: "*/*",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Youdao Desktop Dict (Windows NT 10.0)",
+        Cookie: "DESKDICT_VENDOR=unknown"
+      },
+      body: body.toString()
     },
     request.settings.requestTimeoutMs
   )
   const json = (await parseJsonResponse(response, "Youdao")) as {
-    fanyi?: { tran?: string }
-    ec?: { word?: Array<{ trs?: Array<{ tr?: Array<{ l?: { i?: string[] } }> }> }> }
+    translateResult?: Array<Array<{ tgt?: string }>>
   }
-  const dictionaryText = json.ec?.word?.[0]?.trs?.[0]?.tr?.[0]?.l?.i?.join("; ")
-  const translatedText = requireString(json.fanyi?.tran || dictionaryText, "Youdao returned an empty translation.")
+  const translatedText = requireString(
+    json.translateResult
+      ?.map(row => row.map(item => item.tgt || "").join(""))
+      .join("")
+      .trim(),
+    "Youdao returned an empty translation."
+  )
 
   return {
     translatedText,
@@ -616,30 +661,108 @@ function caiyunTranslationType(direction: LanguageDirection): string {
   return direction.targetLanguage === "zh" ? "auto2zh" : "auto2en"
 }
 
+function caiyunCrypt(ifDecrypt = true): Record<string, string> {
+  const normalKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=.+-_/"
+  const cipherKey = "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm0123456789=.+-_/"
+  const source = ifDecrypt ? cipherKey : normalKey
+  const target = ifDecrypt ? normalKey : cipherKey
+  const map: Record<string, string> = {}
+  for (let i = 0; i < source.length; i++) {
+    map[source[i]] = target[i]
+  }
+  return map
+}
+
+function caiyunDecrypt(cipherText: string): string {
+  const map = caiyunCrypt(true)
+  const normalized = cipherText
+    .split("")
+    .map(char => map[char] ?? char)
+    .join("")
+  return Buffer.from(normalized, "base64").toString("utf8")
+}
+
+const CAIYUN_HEADERS: Record<string, string> = {
+  Accept: "application/json, text/plain, */*",
+  "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+  "App-Name": "xy",
+  "Cache-Control": "no-cache",
+  "Content-Type": "application/json",
+  "Device-Id": "",
+  Origin: "https://fanyi.caiyunapp.com",
+  "Os-Type": "web",
+  "Os-Version": "",
+  Pragma: "no-cache",
+  Referer: "https://fanyi.caiyunapp.com/",
+  "X-Authorization": CAIYUN_DEFAULT_TOKEN
+}
+
+async function getCaiyunJwt(request: TranslationRequest): Promise<string> {
+  const body = JSON.stringify({ browser_id: CAIYUN_BROWSER_ID })
+  await fetchWithTimeout(
+    "https://api.interpreter.caiyunai.com/v1/user/jwt/generate",
+    {
+      method: "OPTIONS",
+      headers: CAIYUN_HEADERS,
+      body
+    },
+    request.settings.requestTimeoutMs
+  )
+  const response = await fetchWithTimeout(
+    "https://api.interpreter.caiyunai.com/v1/user/jwt/generate",
+    {
+      method: "POST",
+      headers: CAIYUN_HEADERS,
+      body
+    },
+    request.settings.requestTimeoutMs
+  )
+  const json = (await parseJsonResponse(response, "Caiyun JWT")) as { jwt?: string }
+  return requireString(json.jwt, "Caiyun returned an empty JWT.")
+}
+
 export async function translateWithCaiyun(request: TranslationRequest): Promise<TranslationResponse> {
   const transType = caiyunTranslationType(request.direction)
+  const jwt = await getCaiyunJwt(request)
+  const headers = {
+    ...CAIYUN_HEADERS,
+    "T-Authorization": jwt
+  }
+  const body = JSON.stringify({
+    source: request.text,
+    trans_type: transType,
+    request_id: "web_fanyi",
+    media: "text",
+    os_type: "web",
+    dict: true,
+    cached: true,
+    replaced: true,
+    detect: true,
+    browser_id: CAIYUN_BROWSER_ID
+  })
+  await fetchWithTimeout(
+    "https://api.interpreter.caiyunai.com/v1/translator",
+    {
+      method: "OPTIONS",
+      headers,
+      body
+    },
+    request.settings.requestTimeoutMs
+  )
   const response = await fetchWithTimeout(
     "https://api.interpreter.caiyunai.com/v1/translator",
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Authorization": `token ${CAIYUN_DEFAULT_TOKEN}`
-      },
-      body: JSON.stringify({
-        source: [request.text],
-        trans_type: transType,
-        detect: transType.startsWith("auto"),
-        media: "text"
-      })
+      headers,
+      body
     },
     request.settings.requestTimeoutMs
   )
   const json = (await parseJsonResponse(response, "Caiyun")) as {
-    target?: string[]
+    target?: string
     rc?: number
   }
-  const translatedText = requireString(json.target?.[0], "Caiyun returned an empty translation.")
+  const translatedText = requireString(json.target ? caiyunDecrypt(json.target) : "", "Caiyun returned an empty translation.")
 
   return {
     translatedText,

@@ -65,7 +65,6 @@ pnpm build
 - `默认翻译源`：普通 `tr <text>` 使用的翻译源。
 - `同时显示翻译源`：选择多个翻译源后，同一次查询会展示多条结果。
 - `免配置翻译源`：管理 Microsoft、有道、彩云等无需手动 API Key 的翻译源。
-- `DeepL`：配置 DeepL 套餐和 API Key。
 - `大模型翻译源`：配置 OpenAI、Claude、DeepSeek 或通用大模型的 API Key、Base URL 和模型名。
 - `历史记录条数`：默认保留 10 条翻译历史。
 - `显示原文和服务详情`：控制预览中是否展示原文、provider 和语言方向。
@@ -170,7 +169,6 @@ The build output is written to `dist/`. `make package` creates `wox.plugin.luxtr
 - `Default provider`: provider used by normal `tr <text>` queries.
 - `Visible providers`: choose multiple providers to display several results at once.
 - `No-setup providers`: manage Microsoft, Youdao, and Caiyun-style providers.
-- `DeepL`: configure the DeepL plan and API key.
 - `Large language model providers`: configure OpenAI-compatible API keys, base URLs, and model names for OpenAI, Claude, DeepSeek, or custom endpoints.
 - `History limit`: keeps 10 entries by default.
 - `Show source and provider details`: controls whether previews include source text, provider, and direction details.

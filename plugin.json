@@ -32,7 +32,6 @@
       "table_note_microsoft": "No setup",
       "table_note_youdao": "No setup dictionary/translation endpoint",
       "table_note_caiyun": "No setup web translator flow",
-      "table_note_deepl": "Needs DeepL API key",
       "table_note_openai": "Needs OpenAI-compatible API key",
       "table_note_claude": "Needs Anthropic API key",
       "table_note_deepseek": "Needs DeepSeek API key",
@@ -88,7 +87,6 @@
       "provider_microsoft": "Microsoft (no setup)",
       "provider_youdao": "Youdao (no setup)",
       "provider_caiyun": "Caiyun (no setup)",
-      "provider_deepl": "DeepL",
       "provider_openai": "OpenAI",
       "provider_claude": "Claude",
       "provider_deepseek": "DeepSeek",
@@ -101,10 +99,7 @@
       "lang_ru": "Russian",
       "lang_ar": "Arabic",
       "lang_fr": "French",
-      "lang_de": "German",
-      "settings_group_deepl": "DeepL",
-      "settings_deepl_api_key": "DeepL API key",
-      "settings_deepl_api_key_tip": "Required when using the DeepL provider."
+      "lang_de": "German"
     },
     "zh_CN": {
       "plugin_name": "LuxTranslate",
@@ -129,7 +124,6 @@
       "table_note_microsoft": "免配置",
       "table_note_youdao": "免配置词典/翻译接口",
       "table_note_caiyun": "免配置网页翻译流程",
-      "table_note_deepl": "需要 DeepL API Key",
       "table_note_openai": "需要 OpenAI 兼容 API Key",
       "table_note_claude": "需要 Anthropic API Key",
       "table_note_deepseek": "需要 DeepSeek API Key",
@@ -185,7 +179,6 @@
       "provider_microsoft": "Microsoft（免配置）",
       "provider_youdao": "有道（免配置）",
       "provider_caiyun": "彩云（免配置）",
-      "provider_deepl": "DeepL",
       "provider_openai": "OpenAI",
       "provider_claude": "Claude",
       "provider_deepseek": "DeepSeek",
@@ -198,10 +191,7 @@
       "lang_ru": "俄语",
       "lang_ar": "阿拉伯语",
       "lang_fr": "法语",
-      "lang_de": "德语",
-      "settings_group_deepl": "DeepL",
-      "settings_deepl_api_key": "DeepL API Key",
-      "settings_deepl_api_key_tip": "使用 DeepL 翻译源时必填。"
+      "lang_de": "德语"
     }
   },
   "Entry": "index.js",
@@ -247,10 +237,6 @@
             "Value": "caiyun"
           },
           {
-            "Label": "i18n:provider_deepl",
-            "Value": "deepl"
-          },
-          {
             "Label": "i18n:provider_openai",
             "Value": "openai"
           },
@@ -292,10 +278,6 @@
           {
             "Label": "i18n:provider_caiyun",
             "Value": "caiyun"
-          },
-          {
-            "Label": "i18n:provider_deepl",
-            "Value": "deepl"
           },
           {
             "Label": "i18n:provider_openai",
@@ -528,32 +510,6 @@
         ],
         "Style": {
           "Width": 720
-        }
-      }
-    },
-    {
-      "Type": "newline",
-      "Value": {
-        "Style": {}
-      }
-    },
-    {
-      "Type": "head",
-      "Value": {
-        "Content": "i18n:settings_group_deepl",
-        "Style": {}
-      }
-    },
-    {
-      "Type": "textbox",
-      "Value": {
-        "Key": "deepl_api_key",
-        "Label": "i18n:settings_deepl_api_key",
-        "Tooltip": "i18n:settings_deepl_api_key_tip",
-        "DefaultValue": "",
-        "MaxLines": 1,
-        "Style": {
-          "Width": 420
         }
       }
     },

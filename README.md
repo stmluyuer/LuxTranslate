@@ -85,11 +85,19 @@ pnpm build
 
 ## 截图
 
-截图暂未补充。建议后续加入：
+![基础翻译结果](screenshots/query-result.jpg)
 
-- Wox 查询结果截图。
-- 翻译源设置页截图。
-- 大模型 provider 表格编辑截图。
+![多翻译源结果](screenshots/multi-provider-result.jpg)
+
+![插件基础设置](screenshots/settings-basic.jpg)
+
+![大模型翻译源配置](screenshots/settings-llm-table.jpg)
+
+![大模型配置编辑](screenshots/settings-llm-edit.jpg)
+
+![帮助命令](screenshots/help-commands.jpg)
+
+![语言方向帮助](screenshots/help-languages.jpg)
 
 ## AI 协作声明
 
@@ -189,11 +197,19 @@ Useful scripts:
 
 ## Screenshots
 
-Screenshots are expected under `screenshots/` before Wox Store submission. Recommended additions:
+![Basic translation result](screenshots/query-result.jpg)
 
-- Wox query result.
-- Provider settings page.
-- Large language model provider row editor.
+![Multiple provider results](screenshots/multi-provider-result.jpg)
+
+![Plugin basic settings](screenshots/settings-basic.jpg)
+
+![Large language model provider settings](screenshots/settings-llm-table.jpg)
+
+![Large language model row editor](screenshots/settings-llm-edit.jpg)
+
+![Command help](screenshots/help-commands.jpg)
+
+![Language direction help](screenshots/help-languages.jpg)
 
 ## AI Assistance Disclosure
 

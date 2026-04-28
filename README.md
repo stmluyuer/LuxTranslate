@@ -60,6 +60,10 @@ pnpm build
 | `tr history`        | 查看最近翻译历史       |
 | `tr history hello`  | 搜索翻译历史           |
 
+### 使用小技巧
+
+可以配合 Wox 自带的“快捷查询”功能，把常用快捷键绑定到 `tr {wox:selected_text}`。这样在任意应用中选中文字后，按下快捷键就能直接调用 LuxTranslate 翻译选中文本。
+
 ## 配置
 
 - `默认翻译源`：普通 `tr <text>` 使用的翻译源。
@@ -98,6 +102,8 @@ pnpm build
 ![帮助命令](screenshots/help-commands.jpg)
 
 ![语言方向帮助](screenshots/help-languages.jpg)
+
+![快捷查询小技巧](screenshots/quick-query-tip.jpg)
 
 ## AI 协作声明
 
@@ -172,6 +178,10 @@ The build output is written to `dist/`. `make package` creates `wox.plugin.luxtr
 | `tr history`        | Show recent translation history    |
 | `tr history hello`  | Search translation history         |
 
+### Tip
+
+LuxTranslate works well with Wox's built-in quick query feature. Bind a hotkey to `tr {wox:selected_text}` to translate the currently selected text from any app without typing the query manually.
+
 ## Configuration
 
 - `Default provider`: provider used by normal `tr <text>` queries.
@@ -210,6 +220,8 @@ Useful scripts:
 ![Command help](screenshots/help-commands.jpg)
 
 ![Language direction help](screenshots/help-languages.jpg)
+
+![Quick query tip](screenshots/quick-query-tip.jpg)
 
 ## AI Assistance Disclosure
 

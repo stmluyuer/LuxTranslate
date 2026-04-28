@@ -58,7 +58,6 @@ async function loadSettings(ctx: Context): Promise<PluginSettings> {
     defaultTargetLanguage: normalizeLanguageCode(targetLanguageRaw) as LanguageCode,
     pairLanguage: normalizeLanguageCode(pairLanguageRaw) as LanguageCode,
     woxLanguage,
-    deeplPlan: (await getSetting(ctx, "deepl_plan", DEFAULT_SETTINGS.deeplPlan)) === "pro" ? "pro" : "free",
     deeplApiKey: await getSetting(ctx, "deepl_api_key", DEFAULT_SETTINGS.deeplApiKey),
     openaiBaseUrl: await getSetting(ctx, "openai_base_url", DEFAULT_SETTINGS.openaiBaseUrl),
     openaiApiKey: await getSetting(ctx, "openai_api_key", DEFAULT_SETTINGS.openaiApiKey),

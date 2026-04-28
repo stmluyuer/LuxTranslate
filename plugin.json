@@ -104,8 +104,7 @@
       "lang_de": "German",
       "settings_group_deepl": "DeepL",
       "settings_deepl_api_key": "DeepL API key",
-      "settings_deepl_api_key_tip": "Required when using the DeepL provider.",
-      "settings_deepl_plan": "DeepL plan"
+      "settings_deepl_api_key_tip": "Required when using the DeepL provider."
     },
     "zh_CN": {
       "plugin_name": "LuxTranslate",
@@ -202,8 +201,7 @@
       "lang_de": "德语",
       "settings_group_deepl": "DeepL",
       "settings_deepl_api_key": "DeepL API Key",
-      "settings_deepl_api_key_tip": "使用 DeepL 翻译源时必填。",
-      "settings_deepl_plan": "DeepL 套餐"
+      "settings_deepl_api_key_tip": "使用 DeepL 翻译源时必填。"
     }
   },
   "Entry": "index.js",
@@ -544,27 +542,6 @@
       "Value": {
         "Content": "i18n:settings_group_deepl",
         "Style": {}
-      }
-    },
-    {
-      "Type": "select",
-      "Value": {
-        "Key": "deepl_plan",
-        "Label": "i18n:settings_deepl_plan",
-        "DefaultValue": "free",
-        "Options": [
-          {
-            "Label": "Free",
-            "Value": "free"
-          },
-          {
-            "Label": "Pro",
-            "Value": "pro"
-          }
-        ],
-        "Style": {
-          "Width": 220
-        }
       }
     },
     {

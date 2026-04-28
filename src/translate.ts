@@ -50,7 +50,6 @@ export interface PluginSettings {
   pairLanguage: LanguageCode
   /** Wox 界面语言（由插件 init 时通过 i18n 探针检测，不需要持久化） */
   woxLanguage?: LanguageCode
-  deeplPlan: "free" | "pro"
   deeplApiKey: string
   openaiBaseUrl: string
   openaiApiKey: string
@@ -142,7 +141,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   defaultSourceLanguage: "auto",
   defaultTargetLanguage: "auto",
   pairLanguage: "auto",
-  deeplPlan: "free",
   deeplApiKey: "",
   openaiBaseUrl: "https://api.openai.com/v1",
   openaiApiKey: "",
@@ -548,7 +546,7 @@ export async function translateWithMicrosoft(request: TranslationRequest): Promi
 }
 
 export async function translateWithDeepL(request: TranslationRequest): Promise<TranslationResponse> {
-  const endpoint = request.settings.deeplPlan === "pro" ? "https://api.deepl.com/v2/translate" : "https://api-free.deepl.com/v2/translate"
+  const endpoint = "https://api-free.deepl.com/v2/translate"
   const body: Record<string, unknown> = {
     text: [request.text],
     target_lang: request.direction.deeplTarget

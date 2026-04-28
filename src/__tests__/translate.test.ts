@@ -141,7 +141,7 @@ describe("query parsing", () => {
   test("parses provider commands", () => {
     expect(parseTranslationQuery("ms hello", "deepl")).toMatchObject({ provider: "microsoft", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("deepl hello", "microsoft")).toMatchObject({ provider: "deepl", text: "hello", forcedProvider: true })
-    expect(parseTranslationQuery("ai hello", "microsoft")).toMatchObject({ provider: "wox_ai", text: "hello", forcedProvider: true })
+    expect(parseTranslationQuery("ai hello", "microsoft")).toMatchObject({ provider: "microsoft", text: "ai hello", forcedProvider: false })
     expect(parseTranslationQuery("openai hello", "microsoft")).toMatchObject({ provider: "openai", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("claude hello", "microsoft")).toMatchObject({ provider: "claude", text: "hello", forcedProvider: true })
     expect(parseTranslationQuery("deepseek hello", "microsoft")).toMatchObject({ provider: "deepseek", text: "hello", forcedProvider: true })
@@ -227,18 +227,14 @@ describe("query parsing", () => {
 
   test("parses visible provider lists", () => {
     expect(parseProviderList("microsoft,openai,deepseek,openai")).toEqual(["microsoft", "openai", "deepseek"])
-    expect(parseProviderList(JSON.stringify(["deepl", "wox_ai"]))).toEqual(["deepl", "wox_ai"])
+    expect(parseProviderList(JSON.stringify(["deepl", "unknown"]))).toEqual(["deepl"])
     expect(parseProviderList("")).toEqual([])
   })
 
   test("parses provider configuration rows", () => {
-    const rows = [
-      { provider: "microsoft" },
-      { provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" },
-      { provider: "openai", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" },
-      { provider: "unknown" }
-    ]
-    expect(parseProviderTableRows(JSON.stringify(rows))[1]).toMatchObject({ provider: "deepl", apiKey: "deepl-key", deeplPlan: "pro" })
+    const rows = [{ provider: "microsoft" }, { provider: "openai", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" }, { provider: "unknown" }]
+    expect(parseProviderTableRows(JSON.stringify(rows))).toHaveLength(2)
+    expect(parseProviderTableRows(JSON.stringify(rows))[1]).toMatchObject({ provider: "openai", apiKey: "openai-key", baseUrl: "https://example.com/v1", model: "model-a" })
   })
 })
 

@@ -1,7 +1,6 @@
 import { createHash, createHmac, randomUUID } from "node:crypto"
-import { AI, Context, PublicAPI } from "@wox-launcher/wox-plugin"
 
-export type TranslationProvider = "microsoft" | "youdao" | "caiyun" | "openai" | "claude" | "deepseek" | "llm_custom" | "wox_ai" | "deepl" | "openai_compatible"
+export type TranslationProvider = "microsoft" | "youdao" | "caiyun" | "openai" | "claude" | "deepseek" | "llm_custom" | "deepl" | "openai_compatible"
 
 export type LanguageCode = "auto" | "zh" | "en" | "ja" | "ko" | "ru" | "ar" | "fr" | "de"
 
@@ -53,7 +52,6 @@ export interface PluginSettings {
   woxLanguage?: LanguageCode
   deeplPlan: "free" | "pro"
   deeplApiKey: string
-  woxAiModel: string
   openaiBaseUrl: string
   openaiApiKey: string
   openaiModel: string
@@ -107,11 +105,9 @@ export interface ProviderTableRow {
   provider?: string
   name?: string
   note?: string
-  deeplPlan?: string
   apiKey?: string
   baseUrl?: string
   model?: string
-  aiModel?: string
 }
 
 const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
@@ -122,9 +118,6 @@ const PROVIDER_ALIASES: Record<string, TranslationProvider> = {
   caiyun: "caiyun",
   cy: "caiyun",
   deepl: "deepl",
-  ai: "wox_ai",
-  wox_ai: "wox_ai",
-  woxai: "wox_ai",
   openai: "openai",
   claude: "claude",
   anthropic: "claude",
@@ -151,7 +144,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   pairLanguage: "auto",
   deeplPlan: "free",
   deeplApiKey: "",
-  woxAiModel: "",
   openaiBaseUrl: "https://api.openai.com/v1",
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
@@ -176,7 +168,6 @@ function isTranslationProvider(value: string): value is TranslationProvider {
     value === "claude" ||
     value === "deepseek" ||
     value === "llm_custom" ||
-    value === "wox_ai" ||
     value === "deepl" ||
     value === "openai_compatible"
   )
@@ -206,7 +197,10 @@ export function parseProviderList(value: string): TranslationProvider[] {
     if (trimmed === "") {
       continue
     }
-    const provider = normalizeProvider(trimmed)
+    if (!isTranslationProvider(trimmed)) {
+      continue
+    }
+    const provider = trimmed
     if (!providers.includes(provider)) {
       providers.push(provider)
     }
@@ -770,7 +764,13 @@ export async function translateWithCaiyun(request: TranslationRequest): Promise<
   }
 }
 
-function buildTranslationPrompt(text: string, targetLabel: string): AI.Conversation[] {
+interface TranslationPromptMessage {
+  Role: "system" | "user"
+  Text: string
+  Timestamp: number
+}
+
+function buildTranslationPrompt(text: string, targetLabel: string): TranslationPromptMessage[] {
   const now = Date.now()
   return [
     {
@@ -784,28 +784,6 @@ function buildTranslationPrompt(text: string, targetLabel: string): AI.Conversat
       Timestamp: now
     }
   ]
-}
-
-export async function translateWithWoxAI(api: PublicAPI, ctx: Context, request: TranslationRequest): Promise<TranslationResponse> {
-  let finalText = ""
-  await Promise.race([
-    api.LLMStream(ctx, buildTranslationPrompt(request.text, request.direction.targetLabel), data => {
-      if (data.Status === "error") {
-        throw new Error(data.Data)
-      }
-      if (data.Data.trim() !== "") {
-        finalText = data.Data
-      }
-    }),
-    new Promise<void>((_, reject) => {
-      setTimeout(() => reject(new Error("Wox AI translation timed out.")), request.settings.requestTimeoutMs)
-    })
-  ])
-
-  return {
-    translatedText: requireString(finalText, "Wox AI returned an empty translation."),
-    providerName: request.settings.woxAiModel.trim() === "" ? "Wox AI" : `Wox AI (${request.settings.woxAiModel})`
-  }
 }
 
 export async function translateWithOpenAICompatible(request: TranslationRequest, providerName = "OpenAI compatible"): Promise<TranslationResponse> {
@@ -880,7 +858,7 @@ export async function translateWithClaude(request: TranslationRequest): Promise<
   }
 }
 
-export async function translateText(api: PublicAPI, ctx: Context, provider: TranslationProvider, request: TranslationRequest): Promise<TranslationResponse> {
+export async function translateText(provider: TranslationProvider, request: TranslationRequest): Promise<TranslationResponse> {
   if (provider === "microsoft") {
     return translateWithMicrosoft(request)
   }
@@ -892,9 +870,6 @@ export async function translateText(api: PublicAPI, ctx: Context, provider: Tran
   }
   if (provider === "deepl") {
     return translateWithDeepL(request)
-  }
-  if (provider === "wox_ai") {
-    return translateWithWoxAI(api, ctx, request)
   }
   if (provider === "claude") {
     return translateWithClaude(request)

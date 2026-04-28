@@ -18,14 +18,15 @@ LuxTranslate 将翻译源分为三类：
 | 类型       | 翻译源                                                |
 | ---------- | ----------------------------------------------------- |
 | 免配置翻译 | Microsoft、有道、彩云                                 |
+| 专用 API   | DeepL                                                 |
 | 大模型翻译 | OpenAI、Claude、DeepSeek、通用 OpenAI-compatible 接口 |
-| Wox AI     | 直接使用 Wox 中已经配置好的 AI                        |
 
 说明：
 
 - Microsoft 使用免手动配置的接口，但该接口不是官方稳定 API，可能随时失效。
 - 有道使用公开词典/翻译接口，适合轻量查询。
 - 彩云使用公开 API 接口，内置测试 Token，适合轻量查询。如需稳定使用建议申请自己的 API Token。
+- DeepL 使用官方 DeepL API，需要用户 API Key。
 - OpenAI、DeepSeek 和通用大模型使用 OpenAI-compatible chat completions 格式。
 - Claude 使用 Anthropic Messages API 格式。
 
@@ -51,11 +52,11 @@ pnpm build
 | `tr ms hello`       | 强制使用 Microsoft     |
 | `tr youdao hello`   | 强制使用有道           |
 | `tr caiyun hello`   | 强制使用彩云           |
+| `tr deepl hello`    | 强制使用 DeepL         |
 | `tr openai hello`   | 强制使用 OpenAI        |
 | `tr claude hello`   | 强制使用 Claude        |
 | `tr deepseek hello` | 强制使用 DeepSeek      |
 | `tr custom hello`   | 强制使用通用大模型接口 |
-| `tr ai hello`       | 强制使用 Wox AI        |
 | `tr history`        | 查看最近翻译历史       |
 | `tr history hello`  | 搜索翻译历史           |
 
@@ -64,8 +65,8 @@ pnpm build
 - `默认翻译源`：普通 `tr <text>` 使用的翻译源。
 - `同时显示翻译源`：选择多个翻译源后，同一次查询会展示多条结果。
 - `免配置翻译源`：管理 Microsoft、有道、彩云等无需手动 API Key 的翻译源。
+- `DeepL`：配置 DeepL 套餐和 API Key。
 - `大模型翻译源`：配置 OpenAI、Claude、DeepSeek 或通用大模型的 API Key、Base URL 和模型名。
-- `Wox AI`：直接使用 Wox 中配置的 AI 能力。
 - `历史记录条数`：默认保留 10 条翻译历史。
 - `显示原文和服务详情`：控制预览中是否展示原文、provider 和语言方向。
 
@@ -121,8 +122,8 @@ LuxTranslate groups providers into three categories:
 | Category              | Providers                                                   |
 | --------------------- | ----------------------------------------------------------- |
 | No-setup translation  | Microsoft, Youdao, Caiyun                                   |
+| Dedicated API         | DeepL                                                       |
 | Large language models | OpenAI, Claude, DeepSeek, custom OpenAI-compatible endpoint |
-| Wox AI                | Uses the AI model configured in Wox                         |
 
 Notes:
 
@@ -161,7 +162,6 @@ The build output is written to `dist/`. `make package` creates `wox.plugin.luxtr
 | `tr claude hello`   | Force Claude                       |
 | `tr deepseek hello` | Force DeepSeek                     |
 | `tr custom hello`   | Force the custom LLM endpoint      |
-| `tr ai hello`       | Force Wox AI                       |
 | `tr history`        | Show recent translation history    |
 | `tr history hello`  | Search translation history         |
 
@@ -170,8 +170,8 @@ The build output is written to `dist/`. `make package` creates `wox.plugin.luxtr
 - `Default provider`: provider used by normal `tr <text>` queries.
 - `Visible providers`: choose multiple providers to display several results at once.
 - `No-setup providers`: manage Microsoft, Youdao, and Caiyun-style providers.
-- `Large language model providers`: configure DeepL API keys and OpenAI-compatible API keys, base URLs, and model names for OpenAI, Claude, DeepSeek, or custom endpoints.
-- `Wox AI`: uses the AI model configured in Wox.
+- `DeepL`: configure the DeepL plan and API key.
+- `Large language model providers`: configure OpenAI-compatible API keys, base URLs, and model names for OpenAI, Claude, DeepSeek, or custom endpoints.
 - `History limit`: keeps 10 entries by default.
 - `Show source and provider details`: controls whether previews include source text, provider, and direction details.
 

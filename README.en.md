@@ -2,6 +2,8 @@
 
 [English](README.en.md) | [中文](README.md)
 
+> **Beta Notice**: This plugin is still a test version and has not been fully tested. If you run into a serious bug, I apologize in advance. Please report it through GitHub Issues and I will fix it as soon as I can.
+
 LuxTranslate is a translation plugin for [Wox](https://github.com/Wox-launcher/Wox). It uses the `tr` trigger keyword and detects the default direction automatically: Chinese text is translated to English, while other text is translated to Chinese by default.
 
 ## Features

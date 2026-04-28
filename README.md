@@ -2,6 +2,8 @@
 
 [中文](README.md) | [English](README.en.md)
 
+> **测试版声明**：当前插件仍属于测试版本，尚未经过充分测试。如有严重 bug，我先道歉；也欢迎在 GitHub Issues 反馈给我，我会尽快修复。
+
 LuxTranslate 是一个面向 [Wox](https://github.com/Wox-launcher/Wox) 的翻译插件。它提供 `tr` 触发词，默认自动判断中英文方向：检测到中文时翻译为英文，其他文本默认翻译为中文。
 
 ## 功能

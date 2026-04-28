@@ -165,7 +165,6 @@ async function buildHelpResult(ctx: Context): Promise<Result> {
         `| tr ms hello | ${desc(await t(ctx, "help_microsoft"))} |`,
         `| tr youdao hello | ${desc(await t(ctx, "help_youdao"))} |`,
         `| tr caiyun hello | ${desc(await t(ctx, "help_caiyun"))} |`,
-        `| tr deepl hello | ${desc(await t(ctx, "help_deepl"))} |`,
         `| tr openai hello | ${desc(await t(ctx, "help_openai"))} |`,
         `| tr claude hello | ${desc(await t(ctx, "help_claude"))} |`,
         `| tr deepseek hello | ${desc(await t(ctx, "help_deepseek"))} |`,
@@ -234,7 +233,7 @@ async function buildResultActions(ctx: Context, translatedText: string, sourceTe
     }
   ]
 
-  for (const alternate of ["microsoft", "youdao", "caiyun", "deepl", "openai", "claude", "deepseek", "llm_custom"] as TranslationProvider[]) {
+  for (const alternate of ["microsoft", "youdao", "caiyun", "openai", "claude", "deepseek", "llm_custom"] as TranslationProvider[]) {
     if (alternate === provider) {
       continue
     }
@@ -289,7 +288,8 @@ async function translateProviderResult(
   // 用户通过 tr 指令指定的语言覆盖优先，否则走设置项
   const effectiveSource = languageOverrides?.sourceLanguage || providerSettings.defaultSourceLanguage
   const effectiveTarget = languageOverrides?.targetLanguage || (providerSettings.defaultTargetLanguage === "auto" ? providerSettings.woxLanguage || "en" : providerSettings.defaultTargetLanguage)
-  const pair = languageOverrides?.targetLanguage || providerSettings.pairLanguage || "auto"
+  const forceFixedTarget = Boolean(languageOverrides?.targetLanguage) || providerSettings.defaultTargetLanguage !== "auto"
+  const pair = forceFixedTarget ? effectiveTarget : providerSettings.pairLanguage || "auto"
 
   const direction = resolveLanguageDirection(sourceText, effectiveSource, effectiveTarget, pair)
   const history = await loadHistory(ctx)

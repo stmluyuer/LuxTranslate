@@ -714,6 +714,10 @@ async function getCaiyunJwt(request: TranslationRequest): Promise<string> {
 }
 
 export async function translateWithCaiyun(request: TranslationRequest): Promise<TranslationResponse> {
+  if (!["zh", "en"].includes(request.direction.targetLanguage)) {
+    throw new Error("Caiyun only supports Chinese and English target languages.")
+  }
+
   const transType = caiyunTranslationType(request.direction)
   const jwt = await getCaiyunJwt(request)
   const headers = {

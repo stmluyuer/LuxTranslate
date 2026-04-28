@@ -18,7 +18,6 @@ LuxTranslate 将翻译源分为三类：
 | 类型       | 翻译源                                                |
 | ---------- | ----------------------------------------------------- |
 | 免配置翻译 | Microsoft、有道、彩云                                 |
-| 专用 API   | DeepL                                                 |
 | 大模型翻译 | OpenAI、Claude、DeepSeek、通用 OpenAI-compatible 接口 |
 
 说明：
@@ -26,7 +25,6 @@ LuxTranslate 将翻译源分为三类：
 - Microsoft 使用免手动配置的接口，但该接口不是官方稳定 API，可能随时失效。
 - 有道使用公开词典/翻译接口，适合轻量查询。
 - 彩云使用公开 API 接口，内置测试 Token，适合轻量查询。如需稳定使用建议申请自己的 API Token。
-- DeepL 使用官方 DeepL API，需要用户 API Key。
 - OpenAI、DeepSeek 和通用大模型使用 OpenAI-compatible chat completions 格式。
 - Claude 使用 Anthropic Messages API 格式。
 
@@ -52,7 +50,6 @@ pnpm build
 | `tr ms hello`       | 强制使用 Microsoft     |
 | `tr youdao hello`   | 强制使用有道           |
 | `tr caiyun hello`   | 强制使用彩云           |
-| `tr deepl hello`    | 强制使用 DeepL         |
 | `tr openai hello`   | 强制使用 OpenAI        |
 | `tr claude hello`   | 强制使用 Claude        |
 | `tr deepseek hello` | 强制使用 DeepSeek      |
@@ -99,10 +96,6 @@ pnpm build
 
 ![大模型配置编辑](screenshots/settings-llm-edit.jpg)
 
-![帮助命令](screenshots/help-commands.jpg)
-
-![语言方向帮助](screenshots/help-languages.jpg)
-
 ![快捷查询小技巧](screenshots/quick-query-tip.jpg)
 
 ## AI 协作声明
@@ -135,7 +128,6 @@ LuxTranslate groups providers into three categories:
 | Category              | Providers                                                   |
 | --------------------- | ----------------------------------------------------------- |
 | No-setup translation  | Microsoft, Youdao, Caiyun                                   |
-| Dedicated API         | DeepL                                                       |
 | Large language models | OpenAI, Claude, DeepSeek, custom OpenAI-compatible endpoint |
 
 Notes:
@@ -145,7 +137,6 @@ Notes:
 - Caiyun uses the web translator JWT flow used by LunaTranslator for lightweight lookups.
 - OpenAI, DeepSeek, and custom LLM providers use the OpenAI-compatible chat completions format.
 - Claude uses the Anthropic Messages API format.
-- DeepL uses the official DeepL API and requires a user API key.
 
 ## Installation
 
@@ -170,7 +161,6 @@ The build output is written to `dist/`. `make package` creates `wox.plugin.luxtr
 | `tr ms hello`       | Force Microsoft                    |
 | `tr youdao hello`   | Force Youdao                       |
 | `tr caiyun hello`   | Force Caiyun                       |
-| `tr deepl hello`    | Force DeepL                        |
 | `tr openai hello`   | Force OpenAI                       |
 | `tr claude hello`   | Force Claude                       |
 | `tr deepseek hello` | Force DeepSeek                     |
@@ -216,10 +206,6 @@ Useful scripts:
 ![Large language model provider settings](screenshots/settings-llm-table.jpg)
 
 ![Large language model row editor](screenshots/settings-llm-edit.jpg)
-
-![Command help](screenshots/help-commands.jpg)
-
-![Language direction help](screenshots/help-languages.jpg)
 
 ![Quick query tip](screenshots/quick-query-tip.jpg)
 

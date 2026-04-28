@@ -111,6 +111,12 @@ describe("resolveLanguageDirection (8 languages)", () => {
     expect(dir.targetLabel).toBe("English")
   })
 
+  test("can honor a fixed target through the pair language", () => {
+    const dir = resolveLanguageDirection("hello", "zh", "zh", "zh")
+    expect(dir.targetLanguage).toBe("zh")
+    expect(dir.targetLabel).toBe("Chinese")
+  })
+
   test("uses explicit source language", () => {
     const dir = resolveLanguageDirection("hello", "zh", "en")
     expect(dir.sourceLanguage).toBe("zh")
@@ -423,6 +429,19 @@ describe("provider requests", () => {
     expect(body.detect).toBe(true)
     expect(result.translatedText).toBe("你好")
     expect(result.providerName).toBe("Caiyun")
+  })
+
+  test("rejects unsupported Caiyun target languages", async () => {
+    global.fetch = jest.fn() as typeof fetch
+
+    await expect(
+      translateWithCaiyun({
+        text: "hello",
+        direction: resolveLanguageDirection("hello", "auto", "ja"),
+        settings: DEFAULT_SETTINGS
+      })
+    ).rejects.toThrow("Caiyun only supports Chinese and English target languages.")
+    expect(global.fetch).not.toHaveBeenCalled()
   })
 
   test("surfaces provider failures", async () => {

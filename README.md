@@ -13,7 +13,7 @@ LuxTranslate 是一个面向 [Wox](https://github.com/Wox-launcher/Wox) 的翻�
 
 ## 翻译源
 
-LuxTranslate 将翻译源分为三类：
+LuxTranslate 将翻译源分为两类：
 
 | 类型       | 翻译源                                                |
 | ---------- | ----------------------------------------------------- |

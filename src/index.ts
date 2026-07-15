@@ -1,5 +1,6 @@
 import { ActionContext, Context, Plugin, PluginInitParams, PublicAPI, Query, Result, WoxImage } from "@wox-launcher/wox-plugin"
 import {
+  collapseExtraBlankLines,
   DEFAULT_SETTINGS,
   getMissingConfiguration,
   historyKeyMatches,
@@ -258,12 +259,15 @@ async function buildResultActions(ctx: Context, translatedText: string, sourceTe
 }
 
 async function buildTranslationPreview(ctx: Context, translatedText: string, sourceText: string, providerName: string, direction: string, showDetails: boolean): Promise<string> {
+  const text = collapseExtraBlankLines(translatedText)
   if (!showDetails) {
-    return `# ${translatedText}`
+    return text
   }
 
   return [
-    `# ${translatedText}`,
+    text,
+    "",
+    "---",
     "",
     `## ${await t(ctx, "preview_source")}`,
     sourceText,
@@ -304,15 +308,14 @@ async function translateProviderResult(
 
   if (["openai", "deepseek", "claude", "llm_custom", "openai_compatible"].includes(provider)) {
     const resultId = `lux-tr-${provider}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-    const pName = providerDisplayName(provider)
-    startStreamingTranslation(ctx, provider, sourceText, direction, providerSettings, score, includeProviderInTitle, resultId, history)
+    startStreamingTranslation(ctx, provider, sourceText, direction, providerSettings, resultId, history)
     return {
       Id: resultId,
-      Title: includeProviderInTitle ? `${pName}: Translating...` : "Translating...",
+      Title: await t(ctx, "translating_title"),
       SubTitle: `${await t(ctx, "subtitle_source")}: ${sourceText} | ${direction.sourceLanguage} → ${direction.targetLanguage}`,
       Icon: PLUGIN_ICON,
       Score: score,
-      Tails: [{ Type: "text", Text: pName }],
+      Tails: [{ Type: "text", Text: providerDisplayName(provider) }],
       Actions: []
     }
   }
@@ -357,8 +360,6 @@ async function startStreamingTranslation(
   sourceText: string,
   direction: LanguageDirection,
   providerSettings: PluginSettings,
-  score: number,
-  includeProviderInTitle: boolean,
   resultId: string,
   history: TranslationHistoryEntry[]
 ): Promise<void> {
@@ -372,15 +373,17 @@ async function startStreamingTranslation(
     if (!isFinal && now - lastUpdateTime < UPDATE_INTERVAL_MS) return
     lastUpdateTime = now
 
-    const title = includeProviderInTitle ? `${pName}: ${text}` : text
+    const sanitized = collapseExtraBlankLines(text)
     const ok = await api.UpdateResult(ctx, {
       Id: resultId,
-      Title: title,
+      Title: await t(ctx, "translating_title"),
       Preview: providerSettings.showPreviewDetails
         ? {
             PreviewType: "markdown",
             PreviewData: [
-              `# ${text}`,
+              sanitized,
+              "",
+              "---",
               "",
               `## ${await t(ctx, "preview_source")}`,
               sourceText,
@@ -391,7 +394,7 @@ async function startStreamingTranslation(
             ].join("\n"),
             PreviewProperties: {}
           }
-        : { PreviewType: "markdown", PreviewData: `# ${text}`, PreviewProperties: {} }
+        : { PreviewType: "markdown", PreviewData: sanitized, PreviewProperties: {} }
     })
     return ok
   }
@@ -419,10 +422,28 @@ async function startStreamingTranslation(
     }
     await saveHistory(ctx, upsertHistoryEntry(history, entry, providerSettings.historyLimit))
 
+    const sanitized = collapseExtraBlankLines(fullText)
     const actions = await buildResultActions(ctx, fullText, sourceText, provider)
+    const preview = providerSettings.showPreviewDetails
+      ? [
+          sanitized,
+          "",
+          "---",
+          "",
+          `## ${await t(ctx, "preview_source")}`,
+          sourceText,
+          "",
+          `## ${await t(ctx, "preview_details")}`,
+          `- ${await t(ctx, "preview_provider")}: ${pName}`,
+          `- ${await t(ctx, "preview_direction")}: ${direction.sourceLanguage} → ${direction.targetLanguage}`
+        ].join("\n")
+      : sanitized
+
     await api.UpdateResult(ctx, {
       Id: resultId,
-      Title: includeProviderInTitle ? `${pName}: ${fullText}` : fullText,
+      Title: await t(ctx, "translation_done_title"),
+      SubTitle: `${await t(ctx, "subtitle_source")}: ${sourceText} | ${direction.sourceLanguage} → ${direction.targetLanguage} | ${await t(ctx, "subtitle_enter_to_copy")}`,
+      Preview: { PreviewType: "markdown", PreviewData: preview, PreviewProperties: {} },
       Actions: actions,
       Tails: [{ Type: "text", Text: pName }]
     })
@@ -480,7 +501,7 @@ async function buildTranslationResult(
   }
 
   return {
-    Title: includeProviderInTitle ? `${entry.providerName}: ${entry.translatedText}` : entry.translatedText,
+    Title: await t(ctx, "translation_done_title"),
     SubTitle: subtitleParts.join(" | "),
     Icon: PLUGIN_ICON,
     Score: score,

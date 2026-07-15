@@ -323,8 +323,15 @@ export function parseTranslationQuery(search: string, defaultProvider: Translati
     }
   }
 
-  // 3. 剩余部分为待翻译文本
-  const text = words.slice(idx).join(" ").trim()
+  // 3. 从原始字符串中提取剩余文本（保留换行），而不是 split+join
+  let textStart = 0
+  for (let i = 0; i < idx; i++) {
+    const match = trimmed.slice(textStart).match(/^[^\s]+\s*/)
+    if (match) {
+      textStart += match[0].length
+    }
+  }
+  const text = trimmed.slice(textStart).trim()
 
   return { provider, text, forcedProvider, targetLanguage, sourceLanguage }
 }
@@ -1014,7 +1021,7 @@ function buildTranslationPrompt(text: string, targetLabel: string): TranslationP
   return [
     {
       Role: "system",
-      Text: `Translate the user's text into ${targetLabel}. Return only the translation. Preserve code blocks, URLs, numbers, and proper nouns when appropriate. Do not add explanations.`,
+      Text: `Translate the user's text into ${targetLabel}. Return only the translation. Preserve code blocks, URLs, numbers, proper nouns, and the original line breaks and paragraph structure when appropriate. Multiple consecutive blank lines in the source should become a single line break in the translation. Do not add explanations.`,
       Timestamp: now
     },
     {
@@ -1023,6 +1030,10 @@ function buildTranslationPrompt(text: string, targetLabel: string): TranslationP
       Timestamp: now
     }
   ]
+}
+
+export function collapseExtraBlankLines(text: string): string {
+  return text.replace(/\n{3,}/g, "\n")
 }
 
 export async function translateWithOpenAICompatible(request: TranslationRequest, providerName = "OpenAI compatible"): Promise<TranslationResponse> {

@@ -1,4 +1,5 @@
 import {
+  collapseExtraBlankLines,
   DEFAULT_SETTINGS,
   detectLanguage,
   getMissingConfiguration,
@@ -50,6 +51,26 @@ function caiyunEncrypt(plainText: string): string {
     .map(char => map[char] ?? char)
     .join("")
 }
+
+describe("collapseExtraBlankLines", () => {
+  test("collapses 3+ consecutive newlines to one", () => {
+    expect(collapseExtraBlankLines("a\n\n\n\nb")).toBe("a\nb")
+    expect(collapseExtraBlankLines("line1\n\n\n\n\nline2")).toBe("line1\nline2")
+  })
+
+  test("preserves single and double newlines", () => {
+    expect(collapseExtraBlankLines("a\nb")).toBe("a\nb")
+    expect(collapseExtraBlankLines("a\n\nb")).toBe("a\n\nb")
+  })
+
+  test("returns text without newlines unchanged", () => {
+    expect(collapseExtraBlankLines("hello world")).toBe("hello world")
+  })
+
+  test("returns empty string unchanged", () => {
+    expect(collapseExtraBlankLines("")).toBe("")
+  })
+})
 
 describe("language detection (8 languages)", () => {
   test("detects Chinese via CJK", () => {
@@ -231,6 +252,20 @@ describe("query parsing", () => {
       provider: "microsoft",
       text: "xx hello",
       targetLanguage: undefined
+    })
+  })
+
+  test("preserves newlines in text portion", () => {
+    expect(parseTranslationQuery("hello\nworld\n\ntest", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello\nworld\n\ntest",
+      forcedProvider: false
+    })
+    expect(parseTranslationQuery("ms zh line1\nline2\n\nline3", "deepl")).toMatchObject({
+      provider: "microsoft",
+      text: "line1\nline2\n\nline3",
+      targetLanguage: "zh",
+      forcedProvider: true
     })
   })
 

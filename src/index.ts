@@ -3,6 +3,7 @@ import {
   DEFAULT_SETTINGS,
   getMissingConfiguration,
   historyKeyMatches,
+  LanguageDirection,
   normalizeProvider,
   parseHistoryEntries,
   parseProviderList,
@@ -11,7 +12,10 @@ import {
   PluginSettings,
   resolveLanguageDirection,
   searchHistoryEntries,
+  StreamCallbacks,
   translateText,
+  translateWithClaudeStream,
+  translateWithOpenAICompatibleStream,
   TranslationHistoryEntry,
   TranslationProvider,
   upsertHistoryEntry,
@@ -298,6 +302,21 @@ async function translateProviderResult(
     return buildTranslationResult(ctx, historyEntry, sourceText, providerSettings, score, includeProviderInTitle, true)
   }
 
+  if (["openai", "deepseek", "claude", "llm_custom", "openai_compatible"].includes(provider)) {
+    const resultId = `lux-tr-${provider}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+    const pName = providerDisplayName(provider)
+    startStreamingTranslation(ctx, provider, sourceText, direction, providerSettings, score, includeProviderInTitle, resultId, history)
+    return {
+      Id: resultId,
+      Title: includeProviderInTitle ? `${pName}: Translating...` : "Translating...",
+      SubTitle: `${await t(ctx, "subtitle_source")}: ${sourceText} | ${direction.sourceLanguage} → ${direction.targetLanguage}`,
+      Icon: PLUGIN_ICON,
+      Score: score,
+      Tails: [{ Type: "text", Text: pName }],
+      Actions: []
+    }
+  }
+
   try {
     const translation = await translateText(provider, {
       text: sourceText,
@@ -329,6 +348,117 @@ async function translateProviderResult(
         PreviewProperties: {}
       }
     }
+  }
+}
+
+async function startStreamingTranslation(
+  ctx: Context,
+  provider: TranslationProvider,
+  sourceText: string,
+  direction: LanguageDirection,
+  providerSettings: PluginSettings,
+  score: number,
+  includeProviderInTitle: boolean,
+  resultId: string,
+  history: TranslationHistoryEntry[]
+): Promise<void> {
+  const pName = providerDisplayName(provider)
+  let accumulatedText = ""
+  let lastUpdateTime = 0
+  const UPDATE_INTERVAL_MS = 80
+
+  const updateResult = async (text: string, isFinal: boolean) => {
+    const now = Date.now()
+    if (!isFinal && now - lastUpdateTime < UPDATE_INTERVAL_MS) return
+    lastUpdateTime = now
+
+    const title = includeProviderInTitle ? `${pName}: ${text}` : text
+    const ok = await api.UpdateResult(ctx, {
+      Id: resultId,
+      Title: title,
+      Preview: providerSettings.showPreviewDetails
+        ? {
+            PreviewType: "markdown",
+            PreviewData: [
+              `# ${text}`,
+              "",
+              `## ${await t(ctx, "preview_source")}`,
+              sourceText,
+              "",
+              `## ${await t(ctx, "preview_details")}`,
+              `- ${await t(ctx, "preview_provider")}: ${pName}`,
+              `- ${await t(ctx, "preview_direction")}: ${direction.sourceLanguage} → ${direction.targetLanguage}`
+            ].join("\n"),
+            PreviewProperties: {}
+          }
+        : { PreviewType: "markdown", PreviewData: `# ${text}`, PreviewProperties: {} }
+    })
+    return ok
+  }
+
+  const onToken = async (token: string) => {
+    accumulatedText += token
+    const ok = await updateResult(accumulatedText, false)
+    if (!ok) {
+      throw new Error("Stream cancelled: result no longer visible")
+    }
+  }
+
+  const onComplete = async (fullText: string) => {
+    accumulatedText = fullText
+    await updateResult(fullText, true)
+
+    const entry: TranslationHistoryEntry = {
+      sourceText,
+      translatedText: fullText,
+      provider,
+      providerName: pName,
+      sourceLanguage: direction.sourceLanguage,
+      targetLanguage: direction.targetLanguage,
+      timestamp: Date.now()
+    }
+    await saveHistory(ctx, upsertHistoryEntry(history, entry, providerSettings.historyLimit))
+
+    const actions = await buildResultActions(ctx, fullText, sourceText, provider)
+    await api.UpdateResult(ctx, {
+      Id: resultId,
+      Title: includeProviderInTitle ? `${pName}: ${fullText}` : fullText,
+      Actions: actions,
+      Tails: [{ Type: "text", Text: pName }]
+    })
+  }
+
+  const onError = async (error: Error) => {
+    await api.Log(ctx, "Error", error.stack || error.message)
+    await api.UpdateResult(ctx, {
+      Id: resultId,
+      Title: `${pName}: Translation failed`,
+      SubTitle: errorMessageForProvider(error, provider)
+    })
+  }
+
+  const callbacks: StreamCallbacks = {
+    onToken,
+    onComplete,
+    onError
+  }
+
+  const request = {
+    text: sourceText,
+    direction,
+    settings: providerSettings
+  }
+
+  try {
+    if (provider === "claude") {
+      await translateWithClaudeStream(request, callbacks)
+    } else {
+      const name = provider === "openai" ? "OpenAI" : provider === "deepseek" ? "DeepSeek" : "OpenAI compatible"
+      await translateWithOpenAICompatibleStream(request, name, callbacks)
+    }
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error))
+    await onError(err)
   }
 }
 

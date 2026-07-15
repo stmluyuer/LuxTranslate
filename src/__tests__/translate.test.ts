@@ -1,4 +1,5 @@
 import {
+  collapseExtraBlankLines,
   DEFAULT_SETTINGS,
   detectLanguage,
   getMissingConfiguration,
@@ -9,11 +10,14 @@ import {
   parseTranslationQuery,
   resolveLanguageDirection,
   searchHistoryEntries,
+  StreamCallbacks,
   translateWithCaiyun,
   translateWithDeepL,
   translateWithMicrosoft,
   translateWithClaude,
+  translateWithClaudeStream,
   translateWithOpenAICompatible,
+  translateWithOpenAICompatibleStream,
   translateWithYoudao,
   upsertHistoryEntry
 } from "../translate"
@@ -47,6 +51,26 @@ function caiyunEncrypt(plainText: string): string {
     .map(char => map[char] ?? char)
     .join("")
 }
+
+describe("collapseExtraBlankLines", () => {
+  test("collapses 3+ consecutive newlines to one", () => {
+    expect(collapseExtraBlankLines("a\n\n\n\nb")).toBe("a\nb")
+    expect(collapseExtraBlankLines("line1\n\n\n\n\nline2")).toBe("line1\nline2")
+  })
+
+  test("preserves single and double newlines", () => {
+    expect(collapseExtraBlankLines("a\nb")).toBe("a\nb")
+    expect(collapseExtraBlankLines("a\n\nb")).toBe("a\n\nb")
+  })
+
+  test("returns text without newlines unchanged", () => {
+    expect(collapseExtraBlankLines("hello world")).toBe("hello world")
+  })
+
+  test("returns empty string unchanged", () => {
+    expect(collapseExtraBlankLines("")).toBe("")
+  })
+})
 
 describe("language detection (8 languages)", () => {
   test("detects Chinese via CJK", () => {
@@ -228,6 +252,20 @@ describe("query parsing", () => {
       provider: "microsoft",
       text: "xx hello",
       targetLanguage: undefined
+    })
+  })
+
+  test("preserves newlines in text portion", () => {
+    expect(parseTranslationQuery("hello\nworld\n\ntest", "microsoft")).toMatchObject({
+      provider: "microsoft",
+      text: "hello\nworld\n\ntest",
+      forcedProvider: false
+    })
+    expect(parseTranslationQuery("ms zh line1\nline2\n\nline3", "deepl")).toMatchObject({
+      provider: "microsoft",
+      text: "line1\nline2\n\nline3",
+      targetLanguage: "zh",
+      forcedProvider: true
     })
   })
 
@@ -454,5 +492,177 @@ describe("provider requests", () => {
         settings: { ...DEFAULT_SETTINGS, deeplApiKey: "bad" }
       })
     ).rejects.toThrow("403")
+  })
+})
+
+function sseResponse(chunks: string[]): Response {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk))
+      }
+      controller.close()
+    }
+  })
+  return {
+    ok: true,
+    status: 200,
+    body: stream
+  } as unknown as Response
+}
+
+function sseErrorResponse(status: number, body: unknown): Response {
+  return {
+    ok: false,
+    status,
+    body: null,
+    text: async () => JSON.stringify(body)
+  } as unknown as Response
+}
+
+describe("streaming translation", () => {
+  let tokens: string[]
+  let completed: string | null
+  let errors: Error[]
+  let callbacks: StreamCallbacks
+
+  beforeEach(() => {
+    tokens = []
+    completed = null
+    errors = []
+    callbacks = {
+      onToken: (token: string) => {
+        tokens.push(token)
+      },
+      onComplete: (fullText: string) => {
+        completed = fullText
+      },
+      onError: (error: Error) => {
+        errors.push(error)
+      }
+    }
+  })
+
+  afterEach(() => {
+    global.fetch = (global as unknown as { fetch: typeof fetch }).fetch
+  })
+
+  test("streams OpenAI SSE tokens and completes", async () => {
+    const fetchMock = jest.fn(async () =>
+      sseResponse(['data: {"id":"1","choices":[{"delta":{"content":"你好"},"index":0}]}\n\n', 'data: {"id":"1","choices":[{"delta":{"content":"世界"},"index":0}]}\n\n', "data: [DONE]\n\n"])
+    )
+    global.fetch = fetchMock as typeof fetch
+
+    await translateWithOpenAICompatibleStream(
+      {
+        text: "hello world",
+        direction: resolveLanguageDirection("hello world", "auto", "zh"),
+        settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://example.com/v1", openaiModel: "model-a" }
+      },
+      "OpenAI",
+      callbacks
+    )
+
+    expect(tokens).toEqual(["你好", "世界"])
+    expect(completed).toBe("你好世界")
+    expect(errors).toHaveLength(0)
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe("https://example.com/v1/chat/completions")
+    const body = JSON.parse(init.body as string)
+    expect(body.stream).toBe(true)
+    expect(body.model).toBe("model-a")
+  })
+
+  test("streams Claude SSE tokens and completes", async () => {
+    const fetchMock = jest.fn(async () =>
+      sseResponse([
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"你好"}}\n\n',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"世界"}}\n\n',
+        'event: message_stop\ndata: {"type":"message_stop"}\n\n'
+      ])
+    )
+    global.fetch = fetchMock as typeof fetch
+
+    await translateWithClaudeStream(
+      {
+        text: "hello world",
+        direction: resolveLanguageDirection("hello world", "auto", "zh"),
+        settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://api.anthropic.com/v1", openaiModel: "claude-test" }
+      },
+      callbacks
+    )
+
+    expect(tokens).toEqual(["你好", "世界"])
+    expect(completed).toBe("你好世界")
+    expect(errors).toHaveLength(0)
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe("https://api.anthropic.com/v1/messages")
+    const body = JSON.parse(init.body as string)
+    expect(body.stream).toBe(true)
+  })
+
+  test("reports error when fetch fails with non-ok status", async () => {
+    const fetchMock = jest.fn(async () => sseErrorResponse(401, { error: "invalid key" }))
+    global.fetch = fetchMock as typeof fetch
+
+    await translateWithOpenAICompatibleStream(
+      {
+        text: "hello",
+        direction: resolveLanguageDirection("hello", "auto", "zh"),
+        settings: { ...DEFAULT_SETTINGS, openaiApiKey: "bad", openaiBaseUrl: "https://example.com/v1", openaiModel: "model" }
+      },
+      "OpenAI",
+      callbacks
+    )
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toContain("401")
+    expect(completed).toBeNull()
+  })
+
+  test("handles empty SSE stream gracefully", async () => {
+    const fetchMock = jest.fn(async () => sseResponse(["data: [DONE]\n\n"]))
+    global.fetch = fetchMock as typeof fetch
+
+    await translateWithOpenAICompatibleStream(
+      {
+        text: "hello",
+        direction: resolveLanguageDirection("hello", "auto", "zh"),
+        settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://example.com/v1", openaiModel: "model" }
+      },
+      "OpenAI",
+      callbacks
+    )
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toContain("empty translation")
+  })
+
+  test("handles per-chunk timeout in SSE stream", async () => {
+    const fetchMock = jest.fn(async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: {"id":"1","choices":[{"delta":{"content":"hello"},"index":0}]}\n\n'))
+        }
+      })
+      return { ok: true, status: 200, body: stream } as unknown as Response
+    })
+    global.fetch = fetchMock as typeof fetch
+
+    await translateWithOpenAICompatibleStream(
+      {
+        text: "hello",
+        direction: resolveLanguageDirection("hello", "auto", "zh"),
+        settings: { ...DEFAULT_SETTINGS, openaiApiKey: "token", openaiBaseUrl: "https://example.com/v1", openaiModel: "model", requestTimeoutMs: 50 }
+      },
+      "OpenAI",
+      callbacks
+    )
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toContain("timed out")
   })
 })
